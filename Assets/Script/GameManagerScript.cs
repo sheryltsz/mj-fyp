@@ -20,6 +20,7 @@ public class GameManagerScript : MonoBehaviour
     bool winnerfound = false;
     bool endofturn = true;
     public int btnSelected = -99;
+    public string tiletodiscard = "";
 
     //Bamboo - 1 to 9
     //Character - 10 to 18
@@ -122,6 +123,7 @@ public class GameManagerScript : MonoBehaviour
                 {
                     Debug.Log("RESPONDED");
                     responded = false;
+                    DiscardTile(tiletodiscard);
                 }
                 else
                 {
@@ -152,7 +154,7 @@ public class GameManagerScript : MonoBehaviour
                     {
                         Debug.Log("WaitForResponse OPTION BUTTON - RESPONDED");
                         responded = false;
-                        ExecutePongGang(ponggangset);
+                        ExecutePongGang();
                     }
                     else
                     {
@@ -487,9 +489,29 @@ public class GameManagerScript : MonoBehaviour
         return card.gameObject.transform.parent.name;
     }
 
-    public void DiscardTile(Component tile)
+    public void DiscardTile(string tiletodiscard)
     {
-        tile.gameObject.transform.SetParent(DiscardContainer.transform);
+        GameObject playerContainer;
+        switch (CurrentPlayer)
+        {
+            case 1:
+                playerContainer = Player1Container;
+                break;
+            case 2:
+                playerContainer = Player2Container;
+                break;
+            case 3:
+                playerContainer = Player3Container;
+                break;
+            case 4:
+                playerContainer = Player4Container;
+                break;
+            default:
+                Debug.Log("Invalid player number");
+                playerContainer = null;
+                break;
+        }
+        playerContainer.gameObject.transform.Find(tiletodiscard).gameObject.transform.SetParent(DiscardContainer.transform);
     }
 
     public void NextPlayer()
@@ -758,7 +780,7 @@ public class GameManagerScript : MonoBehaviour
         Debug.Log("PLAYER: " + CurrentPlayer);
         turncount++;
     }
-    void ExecutePongGang(bool[] ponggangset) {
+    void ExecutePongGang() {
         int discardIndex = GetDiscardTile();
         int times;
         AssignNextPlayer();

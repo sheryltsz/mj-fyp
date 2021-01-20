@@ -48,12 +48,9 @@ public class GameTileScript : MonoBehaviour
         if (gm.GetParent(this) == currentPlayerTiles)
         {
             //Debug.Log("Yes Current, " + currentPlayerTiles);
-            gm.DiscardTile(this);
+            //gm.DiscardTile(this);
+            gm.tiletodiscard = this.name;
             gm.responded = true;
-            //maybe run a game loop first then then as and when there is a mouse click, check if valid, else continue w game code
-            //every loop is equivalent to a player's turn. at the end of loop, if there is no "snatch" turn, continue with NextPlayer()
-            // as the one to the right of current player
-            //if there is snatch turn (valid), assign next player to the one who snatched
         }
         else {
             //Debug.Log("Not current player's tiles, Current player: P" + gm.CurrentPlayer);
