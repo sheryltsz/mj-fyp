@@ -60,6 +60,8 @@ public class GameManagerScript : MonoBehaviour
     bool playerchow = false;
     bool playerponggang = false;
     int pongplayer = -99;
+    int gangplayer = -99;
+    bool playergang = false;
 
     // Start is called before the first frame update
     void Start()
@@ -99,7 +101,11 @@ public class GameManagerScript : MonoBehaviour
 
                 //================DRAW FROM WALL================
                 //check !first round and !just chow/pong
-                if (turncount != 1 && playerchow == false && playerponggang == false)
+                if (turncount != 1 && playergang == true) {
+                    playergang = false;
+                    DrawCardFromBackWall();
+                }
+                else if (turncount != 1 && playerchow == false && playerponggang == false )
                 {
                     DrawCardFromWall();
                 }
@@ -108,6 +114,36 @@ public class GameManagerScript : MonoBehaviour
                     playerponggang = false;
                 }
                 //================END OF DRAW FROM WALL================
+
+                //check for gang and if want to
+                if (CheckForPlayerGang()) {
+                    DisplayPlayerGangOptions();
+                    responded = false;
+                    Debug.Log("Enter WaitForResponse-PLAYERGANG");
+                    for (int i = 0; i < 5; i++)
+                    {
+                        yield return new WaitForSeconds(1);
+                        if (responded == true)
+                        {
+                            break;
+                        }
+                    }
+                    if (responded == true)
+                    {
+                        Debug.Log("WaitForResponse OPTION BUTTON - RESPONDED");
+                        responded = false;
+                        ExecutePlayerGang();
+                    }
+                    else
+                    {
+                        Debug.Log("WaitForResponse No response but 5 seconds up");
+                    }
+                    //END OF WAIT FOR PONG GANG RESPONSE
+                    DestroyOptionButtons();
+                    Time.timeScale = 1f;
+                    Debug.Log("WaitForResponse Completed");
+                }
+
 
                 //================WAIT FOR DISCARD================
                 Debug.Log("ENTER WaitForDiscard");
@@ -168,158 +204,61 @@ public class GameManagerScript : MonoBehaviour
                     Debug.Log("WaitForResponse Completed");
 
                 }
-                else {
-                    NextPlayer();
-                }
                 //================END OF CHECK FOR PONG================
+                else
+                {
+                    ////================CHECK FOR CHOW================
+                    int[][] meldsets = new int[][] {
+                        new int[3],
+                        new int[3],
+                        new int[3]
+                    };
 
+                    meldsets = CheckForChow();
+                    if (meldsets != null)
+                    {
+                        DisplayChowOptions(meldsets);
 
+                        //WAIT FOR CHOW RESPONSE
+                        responded = false;
+                        Debug.Log("Enter WaitForResponse-CHOW");
+                        for (int i = 0; i < 5; i++)
+                        {
+                            yield return new WaitForSeconds(1);
+                            if (responded == true)
+                            {
+                                break;
+                            }
+                        }
+                        Debug.Log("EXITED WAIT FOR RESPONSE WAIT 5 SECS LOOP");
+                        if (responded == true)
+                        {
+                            Debug.Log("WaitForResponse OPTION BUTTON - RESPONDED");
+                            responded = false;
+                            ExecuteChow(meldsets);
+                        }
+                        else
+                        {
+                            Debug.Log("WaitForResponse No response but 5 seconds up");
+                            NextPlayer();
+                        }
+                        //END OF WAIT FOR CHOW RESPONSE
 
-                ////================CHECK FOR CHOW================
-                //int[][] meldsets = new int[][] {
-                //    new int[3],
-                //    new int[3],
-                //    new int[3]
-                //};
+                        DestroyOptionButtons();
+                        Time.timeScale = 1f;
+                        Debug.Log("WaitForResponse Completed");
+                    }
+                    else if (meldsets == null)
+                    {
+                        NextPlayer();
+                    }
+                    ////================END OF CHECK FOR CHOW================
+                }
 
-                //meldsets = CheckForChow();
-                //if (meldsets != null)
-                //{
-                //    DisplayChowOptions(meldsets);
-
-                //    //WAIT FOR CHOW RESPONSE
-                //    responded = false;
-                //    Debug.Log("Enter WaitForResponse-CHOW");
-                //    for (int i = 0; i < 5; i++)
-                //    {
-                //        yield return new WaitForSeconds(1);
-                //        if (responded == true)
-                //        {
-                //            break;
-                //        }
-                //    }
-                //    Debug.Log("EXITED WAIT FOR RESPONSE WAIT 5 SECS LOOP");
-                //    if (responded == true)
-                //    {
-                //        Debug.Log("WaitForResponse OPTION BUTTON - RESPONDED");
-                //        responded = false;
-                //        ExecuteChow(meldsets);
-                //    }
-                //    else
-                //    {
-                //        Debug.Log("WaitForResponse No response but 5 seconds up");
-                //        NextPlayer();
-                //    }
-                //    //END OF WAIT FOR CHOW RESPONSE
-
-                //    DestroyOptionButtons();
-                //    Time.timeScale = 1f;
-                //    Debug.Log("WaitForResponse Completed");
-                //}
-                //else if (meldsets == null)
-                //{
-                //    NextPlayer();
-                //}
-                ////================END OF CHECK FOR CHOW================
-                
                 endofturn = true;
             }
         }
     }
-    //IEnumerator WaitForNext()
-    //{
-    //    //KIV check if win and if win, zi mo, winnerfound = true
-    //    //StartCoroutine(CheckForOwnGang());
-    //    //`~----Yes: ExecuteGang(); ---
-    //    //`~----No: Wait for Discard
-
-    //    //Wait for Discard
-    //    Debug.Log("ENTER WaitForNext");
-    //    for (int i = 0; i < 5; i++)
-    //    {
-    //        yield return new WaitForSeconds(1);
-    //        if (responded == true)
-    //        {
-    //            break;
-    //        }
-    //    }
-    //    if (responded == true)
-    //    {
-    //        Debug.Log("RESPONDED");
-    //        responded = false;
-    //    }
-    //    else
-    //    {
-    //        Debug.Log("No response but 5 seconds up");
-    //        DiscardMostRightTile();
-    //    }
-    //    //end of Wait for Discard
-
-    //    //CheckForPongGang(); -- check if can 3 other players can pong
-    //    //`~---Yes: Call for function to ask player if WANT to pong/gang
-    //    //         `~-----Yes: Call for function to ask player if WANT to pong/gang
-    //    //                      `~---Yes: AssignAsNextPlayer(); ExecutePong(); 
-    //    //                      `~---No: CheckForChow();
-    //    //`~---No: CheckForChow() -- check if next player can eat
-    //    //         `~-----Yes: Call for function to ask player if WANT to chow
-    //    //                      `~---Yes: ExecuteChow(); NextPlayer();
-    //    //                      `~---No:  NextPlayer();
-    //    //         `~-----No: NextPlayer();
-    //    //WaitForPongGang();
-
-    //    //if (CheckForPongGang())
-    //    //{
-    //    //    if (ToExecutePongGang())
-    //    //    {
-    //    //        ExecutePongGang();
-    //    //        AssignAsNextPlayer();
-    //    //    }
-    //    //    else
-    //    //    {
-    //    //        if (CheckForChow())
-    //    //        {
-    //    //            if (ToExecuteChow())
-    //    //            {
-    //    //                ExecuteChow();
-    //    //            }
-    //    //            else
-    //    //            {
-    //    //                NextPlayer();
-    //    //            }
-    //    //        }
-    //    //        else
-    //    //        {
-    //    //            NextPlayer();
-    //    //        }
-    //    //    }
-    //    //}
-    //    //else
-    //    //{
-    //    //    if (!CheckForChow) { 
-
-    //    //    }
-    //    //    if (CheckForChow())
-    //    //    {
-    //    //        if (ToExecuteChow())
-    //    //        {
-    //    //            ExecuteChow();
-    //    //        }
-    //    //        else
-    //    //        {
-    //    //            NextPlayer();
-    //    //        }
-    //    //    }
-    //    //    else
-    //    //    {
-    //    //        NextPlayer();
-    //    //    }
-    //    //}
-    //    CheckForChow();
-    //    NextPlayer();
-
-    //    endofturn = true;
-    //}
-
 
     void SetupTiles()
     {
@@ -329,31 +268,6 @@ public class GameManagerScript : MonoBehaviour
         CreateTileSet();
         DealTiles();
     }
-
-    //IEnumerator WaitForDiscard()
-    //{
-    //    Debug.Log("ENTER WAITFORDISCARD");
-    //    for (int i = 0; i < 5; i++)
-    //    {
-    //        yield return new WaitForSeconds(1);
-    //        if (responded == true)
-    //        {
-    //            break;
-    //        }
-    //    }
-    //    if (responded == true)
-    //    {
-    //        Debug.Log("RESPONDED");
-    //        responded = false;
-    //    }
-    //    else
-    //    {
-    //        Debug.Log("No response but 5 seconds up");
-    //        DiscardMostRightTile();
-    //    }
-    //    //NextPlayer();
-    //    Debug.Log("waiting");
-    //}
 
     static List<string> GenerateTileSet()
     {
@@ -514,6 +428,50 @@ public class GameManagerScript : MonoBehaviour
         playerContainer.gameObject.transform.Find(tiletodiscard).gameObject.transform.SetParent(DiscardContainer.transform);
     }
 
+    int GetDiscardTile()
+    {
+        string discardTileName = DiscardContainer.transform.GetChild(DiscardContainer.transform.childCount - 1).gameObject.name;
+        int discardTile;
+        Debug.Log("DISCARD TILE NAME FROM GETDISCARDTILE:  " + discardTileName);
+        int.TryParse(discardTileName, out discardTile);
+        Debug.Log("DISCARD TILE INT FROM GETDISCARDTILE:  " + discardTile);
+        return discardTile;
+    }
+
+    int[] ComputeHand(int player)
+    {
+        GameObject RightSidePlayerContainer;
+        int[] tilesetcount = new int[34];
+        switch (player)
+        {
+            case 1:
+                RightSidePlayerContainer = Player1Container;
+                break;
+            case 2:
+                RightSidePlayerContainer = Player2Container;
+                break;
+            case 3:
+                RightSidePlayerContainer = Player3Container;
+                break;
+            case 4:
+                RightSidePlayerContainer = Player4Container;
+                break;
+            default:
+                RightSidePlayerContainer = null;
+                Debug.Log("Invalid player number");
+                break;
+        }
+        for (int i = 0; i < RightSidePlayerContainer.transform.childCount; i++)
+        {
+            string tileindexstring = RightSidePlayerContainer.transform.GetChild(i).gameObject.name;
+            int tileindex;
+            int.TryParse(tileindexstring, out tileindex);
+            int temp = tileindex - 1;
+            tilesetcount[temp]++;
+        }
+        return tilesetcount;
+    }
+
     public void NextPlayer()
     {
         switch (CurrentPlayer)
@@ -536,6 +494,29 @@ public class GameManagerScript : MonoBehaviour
         }
         Debug.Log("PLAYER: " + CurrentPlayer);
         turncount++;
+    }
+
+    int GetNextPlayer()
+    {
+        int temp;
+        switch (CurrentPlayer)
+        {
+            case 1:
+                temp = 2;
+                return temp;
+            case 2:
+                temp = 3;
+                return temp;
+            case 3:
+                temp = 4;
+                return temp;
+            case 4:
+                temp = 1;
+                return temp;
+            default:
+                Debug.Log("Invalid player number");
+                return temp = -99;
+        }
     }
 
     public void RearrangeCards(GameObject CardContainer)
@@ -610,270 +591,36 @@ public class GameManagerScript : MonoBehaviour
 
     }
 
-    int GetNextPlayer()
+    void DrawCardFromBackWall()
     {
-        int temp;
+        Debug.Log("Draw From Wall");
         switch (CurrentPlayer)
         {
             case 1:
-                temp = 2;
-                return temp;
-            case 2:
-                temp = 3;
-                return temp;
-            case 3:
-                temp = 4;
-                return temp;
-            case 4:
-                temp = 1;
-                return temp;
-            default:
-                Debug.Log("Invalid player number");
-                return temp = -99;
-        }
-    }
-
-    void ExecuteChow(int[][] meldsets)
-    {
-        int discardIndex = GetDiscardTile();
-        int[] chosenmeld = new int[3];
-        int[] notdiscardtile = new int[2];
-
-        Debug.Log("EXECUTE CHOW DISCARD INDEX: " + discardIndex);
-        //identify which tile isnt discard tile
-        switch (btnSelected)
-        {
-            case 0:
-                chosenmeld = meldsets[0];
-                playerchow = true;
-                break;
-            case 1:
-                chosenmeld = meldsets[1];
-                playerchow = true;
+                TileContainer.transform.GetChild(TileContainer.transform.childCount - 1).gameObject.transform.SetParent(Player1Container.transform, false);
+                Player1Container.transform.GetChild(Player1Container.transform.childCount - 1).GetComponent<GameTileScript>().toggleTileFace();
+                RearrangeCards(Player1Container);
                 break;
             case 2:
-                chosenmeld = meldsets[2];
-                playerchow = true;
-                break;
-            default:
-                Debug.Log("Invalid Execute Chow");
-                break;
-        }
-        //extract other 2 tiles from playercontainer and bring to P_TilesExposed***
-
-        //int notdiscardtileindex = 0;
-        //for (int i = 0; i < 3; i++)
-        //{
-        //    if (chosenmeld[i] != discardIndex)
-        //    {
-        //        notdiscardtile[notdiscardtileindex] = chosenmeld[i];
-        //        notdiscardtileindex++;
-        //    }
-        //}
-
-        //for (int i = 0; i < 3; i++) {
-        //    chosenmeld[i] = chosenmeld[i];
-        //}
-        NextPlayer();
-        GameObject PlayerContainer;
-        GameObject PlayerExposedContainer;
-        switch (CurrentPlayer)
-        {
-            case 1:
-                PlayerContainer = Player1Container;
-                PlayerExposedContainer = Player1ExposedContainer;
-                break;
-            case 2:
-                PlayerContainer = Player2Container; 
-                PlayerExposedContainer = Player2ExposedContainer;
+                TileContainer.transform.GetChild(TileContainer.transform.childCount - 1).gameObject.transform.SetParent(Player2Container.transform, false);
+                Player2Container.transform.GetChild(Player2Container.transform.childCount - 1).GetComponent<GameTileScript>().toggleTileFace();
+                RearrangeCards(Player2Container);
                 break;
             case 3:
-                PlayerContainer = Player3Container;
-                PlayerExposedContainer = Player3ExposedContainer;
+                TileContainer.transform.GetChild(TileContainer.transform.childCount - 1).gameObject.transform.SetParent(Player3Container.transform, false);
+                Player3Container.transform.GetChild(Player3Container.transform.childCount - 1).GetComponent<GameTileScript>().toggleTileFace();
+                RearrangeCards(Player3Container);
                 break;
             case 4:
-                PlayerContainer = Player4Container;
-                PlayerExposedContainer = Player4ExposedContainer;
+                TileContainer.transform.GetChild(TileContainer.transform.childCount - 1).gameObject.transform.SetParent(Player4Container.transform, false);
+                Player4Container.transform.GetChild(Player4Container.transform.childCount - 1).GetComponent<GameTileScript>().toggleTileFace();
+                RearrangeCards(Player4Container);
                 break;
             default:
-                PlayerContainer = null;
-                PlayerExposedContainer = null;
                 Debug.Log("Invalid player number");
                 break;
         }
 
-        GameObject meldsetcontainer = Instantiate(MeldSetContainerPrefab, PlayerExposedContainer.transform);
-
-        for (int i = 0; i < 3; i++)
-        {       
-            string tilename;
-            if (chosenmeld[i].ToString().Length == 1) { tilename = "0" + chosenmeld[i].ToString(); }
-            else { tilename = chosenmeld[i].ToString(); }
-
-            Debug.Log("Tile Name is: " + tilename);
-            if (chosenmeld[i] != discardIndex)
-            {
-
-                PlayerContainer.transform.Find(tilename).gameObject.transform.SetParent(PlayerExposedContainer.transform.GetChild(PlayerExposedContainer.transform.childCount - 1).transform);
-            }
-            else {
-                Debug.Log("DISCARDED TILE NAME: " + DiscardContainer.transform.GetChild(DiscardContainer.transform.childCount - 1).gameObject.name);
-                DiscardContainer.transform.GetChild(DiscardContainer.transform.childCount - 1).gameObject.transform.SetParent(PlayerExposedContainer.transform.GetChild(PlayerExposedContainer.transform.childCount - 1).transform);
-            }
-        }
-
-        playerchow = true;
-        btnSelected = -99;
-        Debug.Log("CHOSEN MELD: " + chosenmeld[0] + "-" + chosenmeld[1] + "-" + chosenmeld[2]);
-    }
-
-    void DisplayPongGangOptions(bool[] ponggangset) {
-        GameObject overlayPrefab = Instantiate(OverlayPanelPrefab, GameCanvas.transform);
-        if (ponggangset[0] == true) {
-            GameObject optionButton = Instantiate(OptionsButtonPrefab, overlayPrefab.transform);
-            optionButton.name = "OptionButton" + "0";
-            optionButton.GetComponentInChildren<Text>().text = "PONG";
-        }
-        if (ponggangset[1] == true)
-        {
-            GameObject optionButton = Instantiate(OptionsButtonPrefab, overlayPrefab.transform);
-            optionButton.name = "OptionButton" + "1";
-            optionButton.GetComponentInChildren<Text>().text = "GANG";
-        }
-    }
-
-    bool[] CheckForPongGang() {
-        bool[] ponggang = new bool[2];
-        ponggang[0] = false;
-        ponggang[1] = false;
-        for (int i = 1; i < 5; i++)
-        {
-            if (CurrentPlayer != i)
-            {
-                Debug.Log("CHECKING FOR PLAYER: " + i);
-                int discardIndex = GetDiscardTile() - 1;
-                Debug.Log("DISCARD TILE CHECKING: " + discardIndex);
-                int[] playerHand = new int[34];
-                playerHand = ComputeHand(i);
-                //Debug.Log("PLAYER" + i + " HAND" + playerHand);
-                Debug.Log("PLAYER" + i + " HAND" + string.Join(",", playerHand));
-
-                if (playerHand[discardIndex] > 1)
-                {
-                    ponggang[0] = true;
-                    pongplayer = i;
-                    if (playerHand[discardIndex] == 3)
-                    {
-                        ponggang[1] = true;
-                    }
-                    Debug.Log("PONG: " + ponggang[0] + " GANG: " + ponggang[1]);
-                    i = 5;
-                }
-                Debug.Log("PONG: " + ponggang[0] + " GANG: " + ponggang[1]);
-            }
-        }
-        return ponggang;
-    }
-
-    void AssignNextPlayer() {
-        CurrentPlayer = pongplayer;
-        Debug.Log("PLAYER: " + CurrentPlayer);
-        turncount++;
-    }
-    void ExecutePongGang() {
-        int discardIndex = GetDiscardTile();
-        int times;
-        AssignNextPlayer();
-        GameObject PlayerContainer;
-        GameObject PlayerExposedContainer;
-        switch (CurrentPlayer)
-        {
-            case 1:
-                PlayerContainer = Player1Container;
-                PlayerExposedContainer = Player1ExposedContainer;
-                break;
-            case 2:
-                PlayerContainer = Player2Container;
-                PlayerExposedContainer = Player2ExposedContainer;
-                break;
-            case 3:
-                PlayerContainer = Player3Container;
-                PlayerExposedContainer = Player3ExposedContainer;
-                break;
-            case 4:
-                PlayerContainer = Player4Container;
-                PlayerExposedContainer = Player4ExposedContainer;
-                break;
-            default:
-                PlayerContainer = null;
-                PlayerExposedContainer = null;
-                Debug.Log("Invalid player number");
-                break;
-        }
-        GameObject meldsetcontainer = Instantiate(MeldSetContainerPrefab, PlayerExposedContainer.transform);
-
-        switch (btnSelected)
-        {
-            case 0:
-                times = 2;
-                playerponggang = true;
-                break;
-            case 1:
-                times = 3;
-                playerponggang = true;
-                break;
-            default:
-                times = 0;
-                Debug.Log("Invalid Execute PongGang");
-                break;
-        }
-
-        Debug.Log("GOING TO SHIFT TILES FOR PLAYER " + CurrentPlayer + " AND TAKE TILE " + discardIndex);
-        DiscardContainer.transform.GetChild(DiscardContainer.transform.childCount - 1).gameObject.transform.SetParent(PlayerExposedContainer.transform.GetChild(PlayerExposedContainer.transform.childCount - 1).transform);
-
-        for (int i = 0; i < times; i++)
-        {
-            string tilename;
-            Debug.Log("Discard Tile Converting to string: " + discardIndex);
-            if (discardIndex.ToString().Length == 1) { tilename = "0" + discardIndex.ToString(); }
-            else { tilename = discardIndex.ToString(); }
-            Debug.Log("Tile Name is: " + tilename);
-            PlayerContainer.transform.Find(tilename).gameObject.transform.SetParent(PlayerExposedContainer.transform.GetChild(PlayerExposedContainer.transform.childCount - 1).transform);
-        }
-    }
-
-    void DestroyOptionButtons()
-    {
-        for (int i = 0; i < 3; i++)
-        {
-            GameObject optionbutton = GameObject.Find("OptionButton" + i);
-            //if the button exist then destroy it
-            if (optionbutton)
-            {
-                Destroy(optionbutton);
-                Debug.Log(optionbutton.name + "has been destroyed.");
-
-            }
-        }
-
-        GameObject overlaypanel = GameObject.Find("OverlayPanel(Clone)");
-        //if the button exist then destroy it
-        if (overlaypanel)
-        {
-            Destroy(overlaypanel);
-            Debug.Log(overlaypanel + "has been destroyed.");
-
-        }
-    }
-
-    int GetDiscardTile()
-    {
-        string discardTileName = DiscardContainer.transform.GetChild(DiscardContainer.transform.childCount - 1).gameObject.name;
-        int discardTile;
-        Debug.Log("DISCARD TILE NAME FROM GETDISCARDTILE:  " + discardTileName);
-        int.TryParse(discardTileName, out discardTile);
-        Debug.Log("DISCARD TILE INT FROM GETDISCARDTILE:  " + discardTile);
-        return discardTile;
     }
 
     void DisplayChowOptions(int[][] meldsets)
@@ -897,6 +644,52 @@ public class GameManagerScript : MonoBehaviour
                 optionButton.name = "OptionButton" + i.ToString();
                 optionButton.GetComponentInChildren<Text>().text = meldsets[i][0] + "-" + meldsets[i][1] + "-" + meldsets[i][2];
             }
+        }
+    }
+
+    void DisplayPongGangOptions(bool[] ponggangset) {
+        GameObject overlayPrefab = Instantiate(OverlayPanelPrefab, GameCanvas.transform);
+        if (ponggangset[0] == true) {
+            GameObject optionButton = Instantiate(OptionsButtonPrefab, overlayPrefab.transform);
+            optionButton.name = "OptionButton" + "0";
+            optionButton.GetComponentInChildren<Text>().text = "PONG";
+        }
+        if (ponggangset[1] == true)
+        {
+            GameObject optionButton = Instantiate(OptionsButtonPrefab, overlayPrefab.transform);
+            optionButton.name = "OptionButton" + "1";
+            optionButton.GetComponentInChildren<Text>().text = "GANG";
+        }
+    }
+
+    void DisplayPlayerGangOptions() {
+        GameObject overlayPrefab = Instantiate(OverlayPanelPrefab, GameCanvas.transform);
+        GameObject optionButton = Instantiate(OptionsButtonPrefab, overlayPrefab.transform);
+        optionButton.name = "OptionButton" + "0";
+        optionButton.GetComponentInChildren<Text>().text = "GANG";
+    }
+
+    void DestroyOptionButtons()
+    {
+        for (int i = 0; i < 3; i++)
+        {
+            GameObject optionbutton = GameObject.Find("OptionButton" + i);
+            //if the button exist then destroy it
+            if (optionbutton)
+            {
+                Destroy(optionbutton);
+                Debug.Log(optionbutton.name + "has been destroyed.");
+
+            }
+        }
+
+        GameObject overlaypanel = GameObject.Find("OverlayPanel(Clone)");
+        //if the button exist then destroy it
+        if (overlaypanel)
+        {
+            Destroy(overlaypanel);
+            Debug.Log(overlaypanel + "has been destroyed.");
+
         }
     }
 
@@ -1045,37 +838,258 @@ public class GameManagerScript : MonoBehaviour
 
     }
 
-    int[] ComputeHand(int player)
+    bool CheckForPlayerGang()
     {
-        GameObject RightSidePlayerContainer;
-        int[] tilesetcount = new int[34];
-        switch (player)
+        Debug.Log("CHECKING FOR PLAYER: " + CurrentPlayer);
+        int[] playerHand = new int[34];
+        playerHand = ComputeHand(CurrentPlayer);
+        Debug.Log("PLAYER" + CurrentPlayer + " HAND" + string.Join(",", playerHand));
+
+        for (int i = 0; i < 34; i++) {
+            if (playerHand[i] == 4)
+            {
+                gangplayer = CurrentPlayer;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    bool[] CheckForPongGang() {
+        bool[] ponggang = new bool[2];
+        ponggang[0] = false;
+        ponggang[1] = false;
+        for (int i = 1; i < 5; i++)
         {
+            if (CurrentPlayer != i)
+            {
+                Debug.Log("CHECKING FOR PLAYER: " + i);
+                int discardIndex = GetDiscardTile() - 1;
+                Debug.Log("DISCARD TILE CHECKING: " + discardIndex);
+                int[] playerHand = new int[34];
+                playerHand = ComputeHand(i);
+                //Debug.Log("PLAYER" + i + " HAND" + playerHand);
+                Debug.Log("PLAYER" + i + " HAND" + string.Join(",", playerHand));
+
+                if (playerHand[discardIndex] > 1)
+                {
+                    ponggang[0] = true;
+                    pongplayer = i;
+                    if (playerHand[discardIndex] == 3)
+                    {
+                        ponggang[1] = true;
+                        gangplayer = i;
+                    }
+                    Debug.Log("PONG: " + ponggang[0] + " GANG: " + ponggang[1]);
+                    i = 5;
+                }
+                Debug.Log("PONG: " + ponggang[0] + " GANG: " + ponggang[1]);
+            }
+        }
+        return ponggang;
+    }
+
+    void AssignNextPlayer() {
+        CurrentPlayer = pongplayer;
+        Debug.Log("PLAYER: " + CurrentPlayer);
+        turncount++;
+    }
+
+    void ExecuteChow(int[][] meldsets)
+    {
+        int discardIndex = GetDiscardTile();
+        int[] chosenmeld = new int[3];
+        int[] notdiscardtile = new int[2];
+
+        Debug.Log("EXECUTE CHOW DISCARD INDEX: " + discardIndex);
+        //identify which tile isnt discard tile
+        switch (btnSelected)
+        {
+            case 0:
+                chosenmeld = meldsets[0];
+                playerchow = true;
+                break;
             case 1:
-                RightSidePlayerContainer = Player1Container;
+                chosenmeld = meldsets[1];
+                playerchow = true;
                 break;
             case 2:
-                RightSidePlayerContainer = Player2Container;
-                break;
-            case 3:
-                RightSidePlayerContainer = Player3Container;
-                break;
-            case 4:
-                RightSidePlayerContainer = Player4Container;
+                chosenmeld = meldsets[2];
+                playerchow = true;
                 break;
             default:
-                RightSidePlayerContainer = null;
+                Debug.Log("Invalid Execute Chow");
+                break;
+        }
+
+        NextPlayer();
+        GameObject PlayerContainer;
+        GameObject PlayerExposedContainer;
+        switch (CurrentPlayer)
+        {
+            case 1:
+                PlayerContainer = Player1Container;
+                PlayerExposedContainer = Player1ExposedContainer;
+                break;
+            case 2:
+                PlayerContainer = Player2Container;
+                PlayerExposedContainer = Player2ExposedContainer;
+                break;
+            case 3:
+                PlayerContainer = Player3Container;
+                PlayerExposedContainer = Player3ExposedContainer;
+                break;
+            case 4:
+                PlayerContainer = Player4Container;
+                PlayerExposedContainer = Player4ExposedContainer;
+                break;
+            default:
+                PlayerContainer = null;
+                PlayerExposedContainer = null;
                 Debug.Log("Invalid player number");
                 break;
         }
-        for (int i = 0; i < RightSidePlayerContainer.transform.childCount; i++)
+
+        GameObject meldsetcontainer = Instantiate(MeldSetContainerPrefab, PlayerExposedContainer.transform);
+
+        for (int i = 0; i < 3; i++)
         {
-            string tileindexstring = RightSidePlayerContainer.transform.GetChild(i).gameObject.name;
-            int tileindex;
-            int.TryParse(tileindexstring, out tileindex);
-            int temp = tileindex - 1;
-            tilesetcount[temp]++;
+            string tilename;
+            if (chosenmeld[i].ToString().Length == 1) { tilename = "0" + chosenmeld[i].ToString(); }
+            else { tilename = chosenmeld[i].ToString(); }
+
+            Debug.Log("Tile Name is: " + tilename);
+            if (chosenmeld[i] != discardIndex)
+            {
+
+                PlayerContainer.transform.Find(tilename).gameObject.transform.SetParent(PlayerExposedContainer.transform.GetChild(PlayerExposedContainer.transform.childCount - 1).transform);
+            }
+            else
+            {
+                Debug.Log("DISCARDED TILE NAME: " + DiscardContainer.transform.GetChild(DiscardContainer.transform.childCount - 1).gameObject.name);
+                DiscardContainer.transform.GetChild(DiscardContainer.transform.childCount - 1).gameObject.transform.SetParent(PlayerExposedContainer.transform.GetChild(PlayerExposedContainer.transform.childCount - 1).transform);
+            }
         }
-        return tilesetcount;
+
+        playerchow = true;
+        btnSelected = -99;
+        Debug.Log("CHOSEN MELD: " + chosenmeld[0] + "-" + chosenmeld[1] + "-" + chosenmeld[2]);
+    }
+
+    void ExecutePlayerGang() {
+        int gangtile = -99;
+        string gangtilename;
+        int[] playerHand = new int[34];
+        playerHand = ComputeHand(CurrentPlayer);
+        GameObject PlayerContainer;
+        GameObject PlayerExposedContainer;
+        switch (CurrentPlayer)
+        {
+            case 1:
+                PlayerContainer = Player1Container;
+                PlayerExposedContainer = Player1ExposedContainer;
+                break;
+            case 2:
+                PlayerContainer = Player2Container;
+                PlayerExposedContainer = Player2ExposedContainer;
+                break;
+            case 3:
+                PlayerContainer = Player3Container;
+                PlayerExposedContainer = Player3ExposedContainer;
+                break;
+            case 4:
+                PlayerContainer = Player4Container;
+                PlayerExposedContainer = Player4ExposedContainer;
+                break;
+            default:
+                PlayerContainer = null;
+                PlayerExposedContainer = null;
+                Debug.Log("Invalid player number");
+                break;
+        }
+        GameObject meldsetcontainer = Instantiate(MeldSetContainerPrefab, PlayerExposedContainer.transform);
+        for (int i = 0; i < 34; i++)
+        {
+            if (playerHand[i] == 4)
+            {
+                gangtile = i;
+                break;
+            }
+        }
+
+        Debug.Log("Gang Tile Converting to string: " + gangtile.ToString());
+        if (gangtile.ToString().Length == 1) { gangtilename = "0" + gangtile.ToString(); }
+        else { gangtilename = gangtile.ToString(); }
+        Debug.Log("Tile Name is: " + gangtilename);
+
+        for (int i = 0; i < 4; i++) {
+            PlayerContainer.transform.Find(gangtilename).gameObject.transform.SetParent(PlayerExposedContainer.transform.GetChild(PlayerExposedContainer.transform.childCount - 1).transform);
+        }
+        DrawCardFromBackWall();
+
+    }
+
+    void ExecutePongGang() {
+        int discardIndex = GetDiscardTile();
+        int times;
+        AssignNextPlayer();
+        GameObject PlayerContainer;
+        GameObject PlayerExposedContainer;
+        switch (CurrentPlayer)
+        {
+            case 1:
+                PlayerContainer = Player1Container;
+                PlayerExposedContainer = Player1ExposedContainer;
+                break;
+            case 2:
+                PlayerContainer = Player2Container;
+                PlayerExposedContainer = Player2ExposedContainer;
+                break;
+            case 3:
+                PlayerContainer = Player3Container;
+                PlayerExposedContainer = Player3ExposedContainer;
+                break;
+            case 4:
+                PlayerContainer = Player4Container;
+                PlayerExposedContainer = Player4ExposedContainer;
+                break;
+            default:
+                PlayerContainer = null;
+                PlayerExposedContainer = null;
+                Debug.Log("Invalid player number");
+                break;
+        }
+        GameObject meldsetcontainer = Instantiate(MeldSetContainerPrefab, PlayerExposedContainer.transform);
+
+        switch (btnSelected)
+        {
+            case 0:
+                times = 2;
+                playerponggang = true;
+                break;
+            case 1:
+                times = 3;
+                playerponggang = true;
+                playergang = true;
+                break;
+            default:
+                times = 0;
+                Debug.Log("Invalid Execute PongGang");
+                break;
+        }
+
+        Debug.Log("GOING TO SHIFT TILES FOR PLAYER " + CurrentPlayer + " AND TAKE TILE " + discardIndex);
+        DiscardContainer.transform.GetChild(DiscardContainer.transform.childCount - 1).gameObject.transform.SetParent(PlayerExposedContainer.transform.GetChild(PlayerExposedContainer.transform.childCount - 1).transform);
+
+        for (int i = 0; i < times; i++)
+        {
+            string tilename;
+            Debug.Log("Discard Tile Converting to string: " + discardIndex);
+            if (discardIndex.ToString().Length == 1) { tilename = "0" + discardIndex.ToString(); }
+            else { tilename = discardIndex.ToString(); }
+            Debug.Log("Tile Name is: " + tilename);
+            PlayerContainer.transform.Find(tilename).gameObject.transform.SetParent(PlayerExposedContainer.transform.GetChild(PlayerExposedContainer.transform.childCount - 1).transform);
+        }
     }
 }
