@@ -536,10 +536,10 @@ MonoBehaviour:
     m_Right: 0
     m_Top: 0
     m_Bottom: 0
-  m_ChildAlignment: 0
+  m_ChildAlignment: 2
   m_StartCorner: 1
   m_StartAxis: 0
-  m_CellSize: {x: 50, y: 50}
+  m_CellSize: {x: 150, y: 50}
   m_Spacing: {x: 0, y: 0}
   m_Constraint: 2
   m_ConstraintCount: 1
@@ -830,10 +830,10 @@ MonoBehaviour:
     m_Right: 0
     m_Top: 0
     m_Bottom: 0
-  m_ChildAlignment: 0
+  m_ChildAlignment: 2
   m_StartCorner: 1
   m_StartAxis: 0
-  m_CellSize: {x: 50, y: 50}
+  m_CellSize: {x: 150, y: 50}
   m_Spacing: {x: 0, y: 0}
   m_Constraint: 2
   m_ConstraintCount: 1
@@ -1737,7 +1737,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 150, y: 300}
+  m_AnchoredPosition: {x: 148, y: 300}
   m_SizeDelta: {x: 700, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1090822572
@@ -1760,7 +1760,7 @@ MonoBehaviour:
   m_ChildAlignment: 2
   m_StartCorner: 1
   m_StartAxis: 0
-  m_CellSize: {x: 50, y: 50}
+  m_CellSize: {x: 150, y: 100}
   m_Spacing: {x: 0, y: 0}
   m_Constraint: 2
   m_ConstraintCount: 1
@@ -2353,22 +2353,30 @@ MonoBehaviour:
   - {fileID: 100000, guid: 7f55264425050ba458807847ffa4f5c0, type: 3}
   CurrentPlayer: 0
   responded: 0
+  btnSelected: -99
   tileset: []
   Tiles: []
   player1Tiles: []
   player2Tiles: []
   player3Tiles: []
   player4Tiles: []
+  GameCanvas: {fileID: 524399388}
   TilePrefab: {fileID: 100000, guid: 8e0d6a55d5cd30143837eab20b16d733, type: 3}
   TileContainer: {fileID: 2143350176}
   Player1Container: {fileID: 635782865}
   Player2Container: {fileID: 660449077}
   Player3Container: {fileID: 1016642628}
   Player4Container: {fileID: 868986185}
+  Player1ExposedContainer: {fileID: 1090822570}
+  Player2ExposedContainer: {fileID: 2032814490}
+  Player3ExposedContainer: {fileID: 388153976}
+  Player4ExposedContainer: {fileID: 214883820}
   DiscardContainer: {fileID: 12754631}
-  OptionsContainer: {fileID: 0}
-  OptionsCanvas: {fileID: 0}
-  OptionsButtonPrefab: {fileID: 4856182194448277440, guid: ea063da32c44e3e48b595a447a7b43a9,
+  OverlayPanelPrefab: {fileID: 1105788455698842116, guid: 7af0bb1f88e18fc449db4f5a91c9bfa5,
+    type: 3}
+  OptionsButtonPrefab: {fileID: 1708063109137372164, guid: 22ad7878f7b23fa4db258516d7d1c95f,
+    type: 3}
+  MeldSetContainerPrefab: {fileID: 5109330651505582512, guid: 16c39ced7ffd20149b1b0eaf4f9bbcd7,
     type: 3}
 --- !u!4 &1549174364
 Transform:
@@ -2951,10 +2959,10 @@ MonoBehaviour:
     m_Right: 0
     m_Top: 0
     m_Bottom: 0
-  m_ChildAlignment: 0
+  m_ChildAlignment: 2
   m_StartCorner: 1
   m_StartAxis: 0
-  m_CellSize: {x: 50, y: 50}
+  m_CellSize: {x: 150, y: 50}
   m_Spacing: {x: 0, y: 0}
   m_Constraint: 2
   m_ConstraintCount: 1

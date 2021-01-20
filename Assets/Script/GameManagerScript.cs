@@ -1,6 +1,4 @@
-﻿//MJ
-
-using System.Collections;
+﻿ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Globalization;
@@ -21,6 +19,7 @@ public class GameManagerScript : MonoBehaviour
     public bool responded = false;
     bool winnerfound = false;
     bool endofturn = true;
+    public int btnSelected = -99;
 
     //Bamboo - 1 to 9
     //Character - 10 to 18
@@ -38,20 +37,28 @@ public class GameManagerScript : MonoBehaviour
     public List<string> player4Tiles;
 
     //GAME OBJECTS VARIABLES
+    public GameObject GameCanvas;
     public GameObject TilePrefab;
     public GameObject TileContainer;
     public GameObject Player1Container;
     public GameObject Player2Container;
     public GameObject Player3Container;
     public GameObject Player4Container;
+    public GameObject Player1ExposedContainer;
+    public GameObject Player2ExposedContainer;
+    public GameObject Player3ExposedContainer;
+    public GameObject Player4ExposedContainer;
     public GameObject DiscardContainer;
-    public GameObject OptionsContainer;
-    public GameObject OptionsCanvas;
+    public GameObject OverlayPanelPrefab;
     public GameObject OptionsButtonPrefab;
+    public GameObject MeldSetContainerPrefab;
 
     //SCRIPTS VARIABLES
     InputManagerScript inputmanager;
 
+    bool playerchow = false;
+    bool playerponggang = false;
+    int pongplayer = -99;
 
     // Start is called before the first frame update
     void Start()
@@ -61,7 +68,13 @@ public class GameManagerScript : MonoBehaviour
 
         //GAMESTART METHOD
         SetupTiles();
-        OptionsCanvas.SetActive(false);
+        //OptionsContainer.SetActive(false);
+
+        //GAMELOOP
+        StartCoroutine(GameLoop());
+        //StartCoroutine(TestLoop());
+
+
     }
 
     // Update is called once per frame
@@ -72,121 +85,238 @@ public class GameManagerScript : MonoBehaviour
             readyGame = 0;
             //end the game
         }
-        if (readyGame == 1)
+
+    }
+
+    IEnumerator GameLoop() {
+        while (readyGame == 1)
         {
-            //Debug.Log("End of turn: " + endofturn);
             if (endofturn == true && !winnerfound)
             {
                 endofturn = false;
-                //check !first round and !just chow/pong
-                //if yes, skip to StartCoroutine(WaitForDiscard());
                 Debug.Log("TURNCOUNT: " + turncount);
-                if (turncount != 1)
+
+                //================DRAW FROM WALL================
+                //check !first round and !just chow/pong
+                if (turncount != 1 && playerchow == false && playerponggang == false)
                 {
                     DrawCardFromWall();
                 }
-                StartCoroutine(WaitForNext());
+                else {
+                    playerchow = false;
+                    playerponggang = false;
+                }
+                //================END OF DRAW FROM WALL================
+
+                //================WAIT FOR DISCARD================
+                Debug.Log("ENTER WaitForDiscard");
+                for (int i = 0; i < 5; i++)
+                {
+                    yield return new WaitForSeconds(1);
+                    if (responded == true)
+                    {
+                        break;
+                    }
+                }
+                if (responded == true)
+                {
+                    Debug.Log("RESPONDED");
+                    responded = false;
+                }
+                else
+                {
+                    Debug.Log("No response but 5 seconds up");
+                    DiscardMostRightTile();
+                }
+                //================END OF WAIT FOR DISCARD================
+
+                //================CHECK FOR PONG================
+                bool[] ponggangset = new bool[2];
+                ponggangset = CheckForPongGang();
+                if (ponggangset.Contains(true))
+                {
+                    DisplayPongGangOptions(ponggangset);
+
+                    //WAIT FOR PONG GANG RESPONSE
+                    responded = false;
+                    Debug.Log("Enter WaitForResponse-PONGGANG");
+                    for (int i = 0; i < 5; i++)
+                    {
+                        yield return new WaitForSeconds(1);
+                        if (responded == true)
+                        {
+                            break;
+                        }
+                    }
+                    if (responded == true)
+                    {
+                        Debug.Log("WaitForResponse OPTION BUTTON - RESPONDED");
+                        responded = false;
+                        ExecutePongGang(ponggangset);
+                    }
+                    else
+                    {
+                        Debug.Log("WaitForResponse No response but 5 seconds up");
+                        //check chow
+                        NextPlayer();
+                    }
+                    //END OF WAIT FOR PONG GANG RESPONSE
+                    DestroyOptionButtons();
+                    Time.timeScale = 1f;
+                    Debug.Log("WaitForResponse Completed");
+
+                }
+                else {
+                    NextPlayer();
+                }
+                //================END OF CHECK FOR PONG================
 
 
+
+                ////================CHECK FOR CHOW================
+                //int[][] meldsets = new int[][] {
+                //    new int[3],
+                //    new int[3],
+                //    new int[3]
+                //};
+
+                //meldsets = CheckForChow();
+                //if (meldsets != null)
+                //{
+                //    DisplayChowOptions(meldsets);
+
+                //    //WAIT FOR CHOW RESPONSE
+                //    responded = false;
+                //    Debug.Log("Enter WaitForResponse-CHOW");
+                //    for (int i = 0; i < 5; i++)
+                //    {
+                //        yield return new WaitForSeconds(1);
+                //        if (responded == true)
+                //        {
+                //            break;
+                //        }
+                //    }
+                //    Debug.Log("EXITED WAIT FOR RESPONSE WAIT 5 SECS LOOP");
+                //    if (responded == true)
+                //    {
+                //        Debug.Log("WaitForResponse OPTION BUTTON - RESPONDED");
+                //        responded = false;
+                //        ExecuteChow(meldsets);
+                //    }
+                //    else
+                //    {
+                //        Debug.Log("WaitForResponse No response but 5 seconds up");
+                //        NextPlayer();
+                //    }
+                //    //END OF WAIT FOR CHOW RESPONSE
+
+                //    DestroyOptionButtons();
+                //    Time.timeScale = 1f;
+                //    Debug.Log("WaitForResponse Completed");
+                //}
+                //else if (meldsets == null)
+                //{
+                //    NextPlayer();
+                //}
+                ////================END OF CHECK FOR CHOW================
+                
+                endofturn = true;
             }
         }
-
     }
+    //IEnumerator WaitForNext()
+    //{
+    //    //KIV check if win and if win, zi mo, winnerfound = true
+    //    //StartCoroutine(CheckForOwnGang());
+    //    //`~----Yes: ExecuteGang(); ---
+    //    //`~----No: Wait for Discard
 
+    //    //Wait for Discard
+    //    Debug.Log("ENTER WaitForNext");
+    //    for (int i = 0; i < 5; i++)
+    //    {
+    //        yield return new WaitForSeconds(1);
+    //        if (responded == true)
+    //        {
+    //            break;
+    //        }
+    //    }
+    //    if (responded == true)
+    //    {
+    //        Debug.Log("RESPONDED");
+    //        responded = false;
+    //    }
+    //    else
+    //    {
+    //        Debug.Log("No response but 5 seconds up");
+    //        DiscardMostRightTile();
+    //    }
+    //    //end of Wait for Discard
 
+    //    //CheckForPongGang(); -- check if can 3 other players can pong
+    //    //`~---Yes: Call for function to ask player if WANT to pong/gang
+    //    //         `~-----Yes: Call for function to ask player if WANT to pong/gang
+    //    //                      `~---Yes: AssignAsNextPlayer(); ExecutePong(); 
+    //    //                      `~---No: CheckForChow();
+    //    //`~---No: CheckForChow() -- check if next player can eat
+    //    //         `~-----Yes: Call for function to ask player if WANT to chow
+    //    //                      `~---Yes: ExecuteChow(); NextPlayer();
+    //    //                      `~---No:  NextPlayer();
+    //    //         `~-----No: NextPlayer();
+    //    //WaitForPongGang();
 
-    IEnumerator WaitForNext() {
-        //KIV check if win and if win, zi mo, winnerfound = true
-        //StartCoroutine(CheckForOwnGang());
-        //`~----Yes: ExecuteGang(); ---
-        //`~----No: Wait for Discard
+    //    //if (CheckForPongGang())
+    //    //{
+    //    //    if (ToExecutePongGang())
+    //    //    {
+    //    //        ExecutePongGang();
+    //    //        AssignAsNextPlayer();
+    //    //    }
+    //    //    else
+    //    //    {
+    //    //        if (CheckForChow())
+    //    //        {
+    //    //            if (ToExecuteChow())
+    //    //            {
+    //    //                ExecuteChow();
+    //    //            }
+    //    //            else
+    //    //            {
+    //    //                NextPlayer();
+    //    //            }
+    //    //        }
+    //    //        else
+    //    //        {
+    //    //            NextPlayer();
+    //    //        }
+    //    //    }
+    //    //}
+    //    //else
+    //    //{
+    //    //    if (!CheckForChow) { 
 
-        //Wait for Discard
-        Debug.Log("ENTER WaitForNext");
-        for (int i = 0; i < 5; i++)
-        {
-            yield return new WaitForSeconds(1);
-            if (responded == true)
-            {
-                break;
-            }
-        }
-        if (responded == true)
-        {
-            Debug.Log("RESPONDED");
-            responded = false;
-        }
-        else
-        {
-            Debug.Log("No response but 5 seconds up");
-            DiscardMostRightTile();
-        }
-        //end of Wait for Discard
+    //    //    }
+    //    //    if (CheckForChow())
+    //    //    {
+    //    //        if (ToExecuteChow())
+    //    //        {
+    //    //            ExecuteChow();
+    //    //        }
+    //    //        else
+    //    //        {
+    //    //            NextPlayer();
+    //    //        }
+    //    //    }
+    //    //    else
+    //    //    {
+    //    //        NextPlayer();
+    //    //    }
+    //    //}
+    //    CheckForChow();
+    //    NextPlayer();
 
-        //CheckForPongGang(); -- check if can 3 other players can pong
-        //`~---Yes: Call for function to ask player if WANT to pong/gang
-        //         `~-----Yes: Call for function to ask player if WANT to pong/gang
-        //                      `~---Yes: AssignAsNextPlayer(); ExecutePong(); 
-        //                      `~---No: CheckForChow();
-        //`~---No: CheckForChow() -- check if next player can eat
-        //         `~-----Yes: Call for function to ask player if WANT to chow
-        //                      `~---Yes: ExecuteChow(); NextPlayer();
-        //                      `~---No:  NextPlayer();
-        //         `~-----No: NextPlayer();
-        //WaitForPongGang();
-
-        //if (CheckForPongGang())
-        //{
-        //    if (ToExecutePongGang())
-        //    {
-        //        ExecutePongGang();
-        //        AssignAsNextPlayer();
-        //    }
-        //    else
-        //    {
-        //        if (CheckForChow())
-        //        {
-        //            if (ToExecuteChow())
-        //            {
-        //                ExecuteChow();
-        //            }
-        //            else
-        //            {
-        //                NextPlayer();
-        //            }
-        //        }
-        //        else
-        //        {
-        //            NextPlayer();
-        //        }
-        //    }
-        //}
-        //else
-        //{
-        //    if (!CheckForChow) { 
-            
-        //    }
-        //    if (CheckForChow())
-        //    {
-        //        if (ToExecuteChow())
-        //        {
-        //            ExecuteChow();
-        //        }
-        //        else
-        //        {
-        //            NextPlayer();
-        //        }
-        //    }
-        //    else
-        //    {
-        //        NextPlayer();
-        //    }
-        //}
-        CheckForChow();
-        NextPlayer();
-
-        endofturn = true;
-    }
+    //    endofturn = true;
+    //}
 
 
     void SetupTiles()
@@ -343,28 +473,6 @@ public class GameManagerScript : MonoBehaviour
             }
         }
 
-
-        //separate to Player1Cards and Player2Cards BY NAME ONLY
-        //for (int i = 0; i < 53; i++)
-        //{
-        //    if (playernow == 1)
-        //    {
-        //        player1Tiles.Add(TileContainer.transform.GetChild(i).gameObject.name);
-        //        playernow = 2;
-        //    }
-
-        ////sort cards BY NAME ONLY
-        //player1Tiles.Sort();
-
-        ////transfer cards (game objects) to respective player containers
-        //foreach (string tilename in player1Tiles)
-        //{
-        //    GameObject current = TileContainer.transform.Find(tilename).gameObject;
-        //    current.transform.SetParent(Player1Container.transform, false);
-        //    current.GetComponent<GameTileScript>().toggleTileFace();
-        //    Debug.Log("Last Child:" + Player1Container.transform.GetChild(Player1Container.transform.childCount - 1).gameObject.name);
-        //}
-
         CurrentPlayer = 1;
         RearrangeCards(Player1Container);
         RearrangeCards(Player2Container);
@@ -480,7 +588,6 @@ public class GameManagerScript : MonoBehaviour
 
     }
 
-
     int GetNextPlayer()
     {
         int temp;
@@ -504,82 +611,290 @@ public class GameManagerScript : MonoBehaviour
         }
     }
 
-    //bool ToExecuteChow(int[][] meldsets, int discardIndex)
-    //{
-    //    //bool chow;
-    //    OptionsCanvas.SetActive(true);
-    //    Time.timeScale = 0f;
+    void ExecuteChow(int[][] meldsets)
+    {
+        int discardIndex = GetDiscardTile();
+        int[] chosenmeld = new int[3];
+        int[] notdiscardtile = new int[2];
 
-    //    //spawn option buttons
+        Debug.Log("EXECUTE CHOW DISCARD INDEX: " + discardIndex);
+        //identify which tile isnt discard tile
+        switch (btnSelected)
+        {
+            case 0:
+                chosenmeld = meldsets[0];
+                playerchow = true;
+                break;
+            case 1:
+                chosenmeld = meldsets[1];
+                playerchow = true;
+                break;
+            case 2:
+                chosenmeld = meldsets[2];
+                playerchow = true;
+                break;
+            default:
+                Debug.Log("Invalid Execute Chow");
+                break;
+        }
+        //extract other 2 tiles from playercontainer and bring to P_TilesExposed***
 
-    //    //StartCoroutine(WaitForResponse());
-    //}
+        //int notdiscardtileindex = 0;
+        //for (int i = 0; i < 3; i++)
+        //{
+        //    if (chosenmeld[i] != discardIndex)
+        //    {
+        //        notdiscardtile[notdiscardtileindex] = chosenmeld[i];
+        //        notdiscardtileindex++;
+        //    }
+        //}
 
-    //IEnumerator WaitForResponse(int[][] meldsets, int discardIndex) {
-    //    responded = false;
-    //    for (int i = 0; i < 5; i++)
-    //    {
-    //        yield return new WaitForSeconds(1);
-    //        if (responded == true)
-    //        {
-    //            break;
-    //        }
-    //    }
-    //    if (responded == true)
-    //    {
-    //        Debug.Log("RESPONDED");
-    //        responded = false;
-    //        ExecuteChow(meldsets, discardIndex);
-    //    }
-    //    else
-    //    {
-    //        Debug.Log("No response but 5 seconds up");
-    //        //remove options button (????)
-    //        OptionsCanvas.SetActive(false);
-    //        Time.timeScale = 1f;
-    //    }
-    //}
-    //void ExecuteChow(int[][] meldsets, int discardIndex)
-    //{
-    //    int[] meld1 = meldsets[0];
-    //    int[] meld2 = meldsets[1];
-    //    int[] meld3 = meldsets[2];
+        //for (int i = 0; i < 3; i++) {
+        //    chosenmeld[i] = chosenmeld[i];
+        //}
+        NextPlayer();
+        GameObject PlayerContainer;
+        GameObject PlayerExposedContainer;
+        switch (CurrentPlayer)
+        {
+            case 1:
+                PlayerContainer = Player1Container;
+                PlayerExposedContainer = Player1ExposedContainer;
+                break;
+            case 2:
+                PlayerContainer = Player2Container; 
+                PlayerExposedContainer = Player2ExposedContainer;
+                break;
+            case 3:
+                PlayerContainer = Player3Container;
+                PlayerExposedContainer = Player3ExposedContainer;
+                break;
+            case 4:
+                PlayerContainer = Player4Container;
+                PlayerExposedContainer = Player4ExposedContainer;
+                break;
+            default:
+                PlayerContainer = null;
+                PlayerExposedContainer = null;
+                Debug.Log("Invalid player number");
+                break;
+        }
 
-    //    for (int i = 0; i < 3; i++)
-    //    {
-    //        if (meldsets[i] == null) { break; }
-    //        else { 
+        GameObject meldsetcontainer = Instantiate(MeldSetContainerPrefab, PlayerExposedContainer.transform);
 
-    //        }
-    //    }
-    //}
+        for (int i = 0; i < 3; i++)
+        {       
+            string tilename;
+            if (chosenmeld[i].ToString().Length == 1) { tilename = "0" + chosenmeld[i].ToString(); }
+            else { tilename = chosenmeld[i].ToString(); }
 
-    public void OptionsButtonListener() {
-        int buttonpos = this.transform.GetSiblingIndex();
-        Debug.Log(buttonpos);
-        responded = true;
+            Debug.Log("Tile Name is: " + tilename);
+            if (chosenmeld[i] != discardIndex)
+            {
+
+                PlayerContainer.transform.Find(tilename).gameObject.transform.SetParent(PlayerExposedContainer.transform.GetChild(PlayerExposedContainer.transform.childCount - 1).transform);
+            }
+            else {
+                Debug.Log("DISCARDED TILE NAME: " + DiscardContainer.transform.GetChild(DiscardContainer.transform.childCount - 1).gameObject.name);
+                DiscardContainer.transform.GetChild(DiscardContainer.transform.childCount - 1).gameObject.transform.SetParent(PlayerExposedContainer.transform.GetChild(PlayerExposedContainer.transform.childCount - 1).transform);
+            }
+        }
+
+        playerchow = true;
+        btnSelected = -99;
+        Debug.Log("CHOSEN MELD: " + chosenmeld[0] + "-" + chosenmeld[1] + "-" + chosenmeld[2]);
     }
 
-    bool CheckForChow()
-    {
+    void DisplayPongGangOptions(bool[] ponggangset) {
+        GameObject overlayPrefab = Instantiate(OverlayPanelPrefab, GameCanvas.transform);
+        if (ponggangset[0] == true) {
+            GameObject optionButton = Instantiate(OptionsButtonPrefab, overlayPrefab.transform);
+            optionButton.name = "OptionButton" + "0";
+            optionButton.GetComponentInChildren<Text>().text = "PONG";
+        }
+        if (ponggangset[1] == true)
+        {
+            GameObject optionButton = Instantiate(OptionsButtonPrefab, overlayPrefab.transform);
+            optionButton.name = "OptionButton" + "1";
+            optionButton.GetComponentInChildren<Text>().text = "GANG";
+        }
+    }
 
+    bool[] CheckForPongGang() {
+        bool[] ponggang = new bool[2];
+        ponggang[0] = false;
+        ponggang[1] = false;
+        for (int i = 1; i < 5; i++)
+        {
+            if (CurrentPlayer != i)
+            {
+                Debug.Log("CHECKING FOR PLAYER: " + i);
+                int discardIndex = GetDiscardTile() - 1;
+                Debug.Log("DISCARD TILE CHECKING: " + discardIndex);
+                int[] playerHand = new int[34];
+                playerHand = ComputeHand(i);
+                //Debug.Log("PLAYER" + i + " HAND" + playerHand);
+                Debug.Log("PLAYER" + i + " HAND" + string.Join(",", playerHand));
+
+                if (playerHand[discardIndex] > 1)
+                {
+                    ponggang[0] = true;
+                    pongplayer = i;
+                    if (playerHand[discardIndex] == 3)
+                    {
+                        ponggang[1] = true;
+                    }
+                    Debug.Log("PONG: " + ponggang[0] + " GANG: " + ponggang[1]);
+                    i = 5;
+                }
+                Debug.Log("PONG: " + ponggang[0] + " GANG: " + ponggang[1]);
+            }
+        }
+        return ponggang;
+    }
+
+    void AssignNextPlayer() {
+        CurrentPlayer = pongplayer;
+        Debug.Log("PLAYER: " + CurrentPlayer);
+        turncount++;
+    }
+    void ExecutePongGang(bool[] ponggangset) {
+        int discardIndex = GetDiscardTile();
+        int times;
+        AssignNextPlayer();
+        GameObject PlayerContainer;
+        GameObject PlayerExposedContainer;
+        switch (CurrentPlayer)
+        {
+            case 1:
+                PlayerContainer = Player1Container;
+                PlayerExposedContainer = Player1ExposedContainer;
+                break;
+            case 2:
+                PlayerContainer = Player2Container;
+                PlayerExposedContainer = Player2ExposedContainer;
+                break;
+            case 3:
+                PlayerContainer = Player3Container;
+                PlayerExposedContainer = Player3ExposedContainer;
+                break;
+            case 4:
+                PlayerContainer = Player4Container;
+                PlayerExposedContainer = Player4ExposedContainer;
+                break;
+            default:
+                PlayerContainer = null;
+                PlayerExposedContainer = null;
+                Debug.Log("Invalid player number");
+                break;
+        }
+        GameObject meldsetcontainer = Instantiate(MeldSetContainerPrefab, PlayerExposedContainer.transform);
+
+        switch (btnSelected)
+        {
+            case 0:
+                times = 2;
+                playerponggang = true;
+                break;
+            case 1:
+                times = 3;
+                playerponggang = true;
+                break;
+            default:
+                times = 0;
+                Debug.Log("Invalid Execute PongGang");
+                break;
+        }
+
+        Debug.Log("GOING TO SHIFT TILES FOR PLAYER " + CurrentPlayer + " AND TAKE TILE " + discardIndex);
+        DiscardContainer.transform.GetChild(DiscardContainer.transform.childCount - 1).gameObject.transform.SetParent(PlayerExposedContainer.transform.GetChild(PlayerExposedContainer.transform.childCount - 1).transform);
+
+        for (int i = 0; i < times; i++)
+        {
+            string tilename;
+            Debug.Log("Discard Tile Converting to string: " + discardIndex);
+            if (discardIndex.ToString().Length == 1) { tilename = "0" + discardIndex.ToString(); }
+            else { tilename = discardIndex.ToString(); }
+            Debug.Log("Tile Name is: " + tilename);
+            PlayerContainer.transform.Find(tilename).gameObject.transform.SetParent(PlayerExposedContainer.transform.GetChild(PlayerExposedContainer.transform.childCount - 1).transform);
+        }
+    }
+
+    void DestroyOptionButtons()
+    {
+        for (int i = 0; i < 3; i++)
+        {
+            GameObject optionbutton = GameObject.Find("OptionButton" + i);
+            //if the button exist then destroy it
+            if (optionbutton)
+            {
+                Destroy(optionbutton);
+                Debug.Log(optionbutton.name + "has been destroyed.");
+
+            }
+        }
+
+        GameObject overlaypanel = GameObject.Find("OverlayPanel(Clone)");
+        //if the button exist then destroy it
+        if (overlaypanel)
+        {
+            Destroy(overlaypanel);
+            Debug.Log(overlaypanel + "has been destroyed.");
+
+        }
+    }
+
+    int GetDiscardTile()
+    {
         string discardTileName = DiscardContainer.transform.GetChild(DiscardContainer.transform.childCount - 1).gameObject.name;
         int discardTile;
+        Debug.Log("DISCARD TILE NAME FROM GETDISCARDTILE:  " + discardTileName);
         int.TryParse(discardTileName, out discardTile);
+        Debug.Log("DISCARD TILE INT FROM GETDISCARDTILE:  " + discardTile);
+        return discardTile;
+    }
+
+    void DisplayChowOptions(int[][] meldsets)
+    {
+        GameObject overlayPrefab = Instantiate(OverlayPanelPrefab, GameCanvas.transform);
+
+
+        for (int i = 0; i < 3; i++)
+        {
+            if (meldsets[i] == null) { break; }
+
+            Debug.Log(meldsets[i][0] + "-" + meldsets[i][1] + "-" + meldsets[i][2]);
+        }
+        //spawn option buttons
+        for (int i = 0; i < 3; i++)
+        {
+            if (meldsets[i] == null) { break; }
+            else
+            {
+                GameObject optionButton = Instantiate(OptionsButtonPrefab, overlayPrefab.transform);
+                optionButton.name = "OptionButton" + i.ToString();
+                optionButton.GetComponentInChildren<Text>().text = meldsets[i][0] + "-" + meldsets[i][1] + "-" + meldsets[i][2];
+            }
+        }
+    }
+
+    int[][] CheckForChow()
+    {
+        int discardTile = GetDiscardTile();
         int[] playerHand = new int[34];
-        playerHand = ComputeHand();
+        playerHand = ComputeHand(GetNextPlayer());
         discardTile -= 1;
         int meldsetindex = 0;
-        int[][] meldsets = new int[3][];
-        //meldsets[0] = new int[] {0,0,0};
-        //meldsets[1] = new int[] { 0, 0, 0 };
-        //meldsets[0] = new int[] { 0, 0, 0 };
+        //int[][] possiblemeldsets = new int[][] {
+        //     new int[3],
+        //     new int[3],
+        //     new int[3]
+        // };
+        int[][] possiblemeldsets = new int[3][];
         Debug.Log("CHECK FOR CHOW ENTERED");
 
         if (discardTile < 27)
         {
-            Debug.Log("curentplayer: " + CurrentPlayer);
-
             //add discard tile to hand temporarily
             playerHand[discardTile]++;
 
@@ -607,8 +922,8 @@ public class GameManagerScript : MonoBehaviour
                         {
                             //activate chow button
                             alrChecked = true;
-                            Debug.Log("CAN CHOW: " + (i +1) + " - " + (i + 2) + " - " + (i + 3));
-                            meldsets[meldsetindex] = new int[] { i + 1, i + 2, i + 3 };
+                            Debug.Log("CAN CHOW: " + (i + 1) + " - " + (i + 2) + " - " + (i + 3));
+                            possiblemeldsets[meldsetindex] = new int[] { i + 1, i + 2, i + 3 };
                             meldsetindex++;
                         }
                     }
@@ -631,7 +946,7 @@ public class GameManagerScript : MonoBehaviour
                             //activate chow button
                             alrChecked = true;
                             Debug.Log("CAN CHOW: " + (i + 1) + " - " + (i + 2) + " - " + (i + 3));
-                            meldsets[meldsetindex] = new int[] { i + 1, i + 2, i + 3 };
+                            possiblemeldsets[meldsetindex] = new int[] { i + 1, i + 2, i + 3 };
                             meldsetindex++;
                         }
                     }
@@ -654,7 +969,7 @@ public class GameManagerScript : MonoBehaviour
                             //activate chow button
                             alrChecked = true;
                             Debug.Log("CAN CHOW: " + (i + 1) + " - " + (i + 2) + " - " + (i + 3));
-                            meldsets[meldsetindex] = new int[] { i + 1, i + 2, i + 3 };
+                            possiblemeldsets[meldsetindex] = new int[] { i + 1, i + 2, i + 3 };
                             meldsetindex++;
                         }
                     }
@@ -677,45 +992,42 @@ public class GameManagerScript : MonoBehaviour
                             //activate chow button
                             alrChecked = true;
                             Debug.Log("CAN CHOW: " + (i + 1) + " - " + (i + 2) + " - " + (i + 3));
-                            meldsets[meldsetindex] = new int[] { i + 1, i + 2, i + 3 };
+                            possiblemeldsets[meldsetindex] = new int[] { i + 1, i + 2, i + 3 };
                             meldsetindex++;
                         }
                     }
                 }
             }
 
-            if (meldsets[0] == null)
+            if (possiblemeldsets[0] == null)
             {
 
                 Debug.Log("NO MELD SETS");
-                return false;
+                return null;
 
             }
-            else
+            //debugging
+            for (int i = 0; i < 3; i++)
             {
-                for (int i = 0; i < 3; i++)
+                if (possiblemeldsets[i] != null)
                 {
-                    if (meldsets[i] != null)
-                    {
-                        Debug.Log("Meld Set " + i + " :" + meldsets[i][0] + "-" + meldsets[i][1] + "-" + meldsets[i][2]);
-                    }
-
+                    Debug.Log(" FINAL Meld Set " + i + " :" + possiblemeldsets[i][0] + "-" + possiblemeldsets[i][1] + "-" + possiblemeldsets[i][2]);
                 }
-                //ToExecuteChow(meldsets, discardTile + 1);
-                return true;
             }
+            //end of debugging            
+            return possiblemeldsets;
+
         }
 
-        return false;
+        return null;
 
     }
 
-    int[] ComputeHand()
+    int[] ComputeHand(int player)
     {
-        int RightSidePlayer = GetNextPlayer();
         GameObject RightSidePlayerContainer;
         int[] tilesetcount = new int[34];
-        switch (RightSidePlayer)
+        switch (player)
         {
             case 1:
                 RightSidePlayerContainer = Player1Container;
@@ -734,7 +1046,7 @@ public class GameManagerScript : MonoBehaviour
                 Debug.Log("Invalid player number");
                 break;
         }
-        for (int i = 0; i < 13; i++)
+        for (int i = 0; i < RightSidePlayerContainer.transform.childCount; i++)
         {
             string tileindexstring = RightSidePlayerContainer.transform.GetChild(i).gameObject.name;
             int tileindex;
