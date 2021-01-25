@@ -11,6 +11,11 @@ using UnityEngine.SceneManagement;
 
 public class GameManagerScript : MonoBehaviour
 {
+    //Player playerA = new Player();
+    //Player playerB = new Player();
+    //Player playerC = new Player();
+    //Player playerD = new Player();
+
 
     //STATIC VARIABLES    
     //public Sprite[] TileFaces;
@@ -26,12 +31,14 @@ public class GameManagerScript : MonoBehaviour
     public string tiletodiscard = "";
     public bool startGame = false;
     bool[] waitinghand = new bool[] { false,false,false,false };
+    bool newGame = true;
+    List<GameObject> tileSetGameObject = new List<GameObject>();
 
-    //Bamboo - 1 to 9
-    //Character - 10 to 18
-    //Dots - 19 to 27
-    //Dragon - 28 to 30
-    //Wind - 31 to 34
+    //Bamboo - 0 to 8
+    //Character - 9 to 17
+    //Dots - 18 to 26
+    //Dragon - 27 to 29
+    //Wind - 30 to 33
 
     //LISTS VARIABLES
     public List<string> tileset;
@@ -92,7 +99,7 @@ public class GameManagerScript : MonoBehaviour
     //Check Hu must implement RIGHT AFTER **ALL** tile discarded
 
     IEnumerator GameLoop() {
-        SetupTiles(); 
+        SetupTiles();
         startGame = false;
         while (readyGame == 1)
         {
@@ -115,6 +122,7 @@ public class GameManagerScript : MonoBehaviour
                         winnerfound = CurrentPlayer;
                         break;
                     }
+                    //if gang - check exposed tiles
                 }
                 else if (turncount != 1 && playerchow == false && playerponggang == false)
                 {
@@ -124,6 +132,7 @@ public class GameManagerScript : MonoBehaviour
                         winnerfound = CurrentPlayer;
                         break;
                     }
+                    //if gang - check exposed tiles
                 }
                 else
                 {
@@ -236,8 +245,57 @@ public class GameManagerScript : MonoBehaviour
                     else
                     {
                         Debug.Log("WaitForResponse No response but 5 seconds up");
-                        //check chow
-                        NextPlayer();
+                        ////================CHECK FOR CHOW================
+                        int[][] meldsets = new int[][] {
+                            new int[3],
+                            new int[3],
+                            new int[3]
+                        };
+
+                        meldsets = CheckForChow();
+                        if (meldsets != null)
+                        {
+                            //if (CheckForHu(InsertDiscardTemp(GetNextPlayer())))
+                            //{
+                            //    winnerfound = GetNextPlayer();
+                            //    break;
+                            //}
+                            DisplayChowOptions(meldsets);
+
+                            //WAIT FOR CHOW RESPONSE
+                            responded = false;
+                            Debug.Log("Enter WaitForResponse-CHOW");
+                            for (int i = 0; i < 5; i++)
+                            {
+                                yield return new WaitForSeconds(1);
+                                if (responded == true)
+                                {
+                                    break;
+                                }
+                            }
+                            Debug.Log("EXITED WAIT FOR RESPONSE WAIT 5 SECS LOOP");
+                            if (responded == true)
+                            {
+                                Debug.Log("WaitForResponse OPTION BUTTON - RESPONDED");
+                                responded = false;
+                                ExecuteChow(meldsets);
+                            }
+                            else
+                            {
+                                Debug.Log("WaitForResponse No response but 5 seconds up");
+                                NextPlayer();
+                            }
+                            //END OF WAIT FOR CHOW RESPONSE
+
+                            DestroyOptionButtons();
+                            Time.timeScale = 1f;
+                            Debug.Log("WaitForResponse Completed");
+                        }
+                        else if (meldsets == null)
+                        {
+                            NextPlayer();
+                        }
+                        ////================END OF CHECK FOR CHOW================
                     }
                     //END OF WAIT FOR PONG GANG RESPONSE
                     DestroyOptionButtons();
@@ -317,72 +375,42 @@ public class GameManagerScript : MonoBehaviour
 
     public void ClearCanvas() {
 
-        //playerchow = false;
-        //playerponggang = false;
-        //pongplayer = -99;
-        //gangplayer = -99;
-        //playergang = false;
-        //CurrentPlayer = -1;
-        //readyGame = 0;
-        //turncount = 0;
-        //responded = false;
-        //winnerfound = -99;
-        //endofturn = true;
-        //btnSelected = -99;
-        //tiletodiscard = "";
-        //startGame = false;
-        //for (int i = 0; i < 4; i++) {
-        //    waitinghand[i] = false;
-        //}
+        playerchow = false;
+        playerponggang = false;
+        pongplayer = -99;
+        gangplayer = -99;
+        playergang = false;
+        CurrentPlayer = -1;
+        readyGame = 0;
+        turncount = 0;
+        responded = false;
+        winnerfound = -99;
+        endofturn = true;
+        btnSelected = -99;
+        tiletodiscard = "";
+        startGame = false;
+        for (int i = 0; i < 4; i++)
+        {
+            waitinghand[i] = false;
+        }
 
-        //for (int i = Player1Container.transform.childCount - 1; i > 0; i--)
-        //{
-        //    Destroy(Player1Container.transform.GetChild(i).gameObject);
-        //}
+        foreach (GameObject tile in tileSetGameObject) {
+            if (tile.transform.parent != TileContainer.transform) { 
+                tile.transform.SetParent(TileContainer.transform, false);
+                tile.GetComponent<GameTileScript>().toggleTileFace();
+                tile.transform.localPosition = new Vector3(0, 0, 0);
+            }
+        }
 
-        //for (int i = Player2Container.transform.childCount - 1; i > 0; i--)
-        //{
-        //    Destroy(Player2Container.transform.GetChild(i).gameObject);
-        //}
-        //for (int i = Player3Container.transform.childCount - 1; i > 0; i--)
-        //{
-        //    Destroy(Player3Container.transform.GetChild(i).gameObject);
-        //}
-        //for (int i = Player4Container.transform.childCount - 1; i > 0; i--)
-        //{
-        //    Destroy(Player4Container.transform.GetChild(i).gameObject);
-        //}
-        //for (int i = TileContainer.transform.childCount - 1; i > 0; i--)
-        //{
-        //    Destroy(TileContainer.transform.GetChild(i).gameObject);
-        //}
+        GameObject gameOverPanel = GameObject.Find("GameOverPanel(Clone)");
+        if (gameOverPanel)
+        {
+            Destroy(gameOverPanel);
+        }
 
-        //GameObject gameOverPanel = GameObject.Find("GameOverPanel(Clone)");
-        //if (gameOverPanel) {
-        //    Destroy(gameOverPanel);
-        //}
-
-        //for (int i = Player1ExposedContainer.transform.childCount - 1; i > 0; i--)
-        //{
-        //    Destroy(Player1ExposedContainer.transform.GetChild(i).gameObject);
-        //}
-        //for (int i = Player2ExposedContainer.transform.childCount - 1; i > 0; i--)
-        //{
-        //    Destroy(Player2ExposedContainer.transform.GetChild(i).gameObject);
-        //}
-        //for (int i = Player3ExposedContainer.transform.childCount - 1; i > 0; i--)
-        //{
-        //    Destroy(Player3ExposedContainer.transform.GetChild(i).gameObject);
-        //}
-        //for (int i = Player4ExposedContainer.transform.childCount - 1; i > 0; i--)
-        //{
-        //    Destroy(Player4ExposedContainer.transform.GetChild(i).gameObject);
-        //}
-        //for (int i = DiscardContainer.transform.childCount - 1; i > 0; i--)
-        //{
-        //    Destroy(DiscardContainer.transform.GetChild(i).gameObject);
-        //}
-        //tileset.Clear();
+        foreach (GameObject meldcontainer in GameObject.FindGameObjectsWithTag("MeldContainer")) {
+            Destroy(meldcontainer);
+        }
     }
     public int[] checkTileSet(int[] handSet)
     {
@@ -548,9 +576,19 @@ public class GameManagerScript : MonoBehaviour
 
     void SetupTiles()
     {
-        tileset = GenerateTileSet();
-        Shuffle(tileset);
-        CreateTileSet();
+
+        if (newGame) {         
+            tileset = GenerateTileSet();
+            Shuffle(tileset);
+            CreateTileSet();
+            newGame = false;
+        }
+        else
+        {
+            Shuffle(tileset);
+            RematchTiles();
+        }
+        Debug.Log("TILESET: " + string.Join(", ", tileset));
         DealTiles();
         Debug.Log("TILESET COUNT: " + tileset.Count);
     }
@@ -560,8 +598,7 @@ public class GameManagerScript : MonoBehaviour
 
         List<string> newTileSet = new List<string>();
 
-        //this nested loop creates a card deck of 52 cards 
-        for (int i = 1; i < 35; i++)
+        for (int i = 0; i < 34; i++)
         {
             for (int j = 0; j < 4; j++)
             {
@@ -601,10 +638,24 @@ public class GameManagerScript : MonoBehaviour
         }
     }
 
+    void RematchTiles() {
+        int tileindex = 0;
+        foreach (string tile in tileset)
+        {
+            for (int i = 0; i > -1; i++)
+            {
+                if (tile == TileContainer.transform.GetChild(i).gameObject.name) {
+                    TileContainer.transform.GetChild(i).gameObject.transform.SetSiblingIndex(tileindex);
+                    tileindex++;
+                    break;
+                }
+            }
+        }
+    }
+
     //spawn deck cards
     void CreateTileSet()
     {
-
         foreach (string tile in tileset)
         {
             for (int i = 0; i > -1; i++)
@@ -612,9 +663,8 @@ public class GameManagerScript : MonoBehaviour
                 if (tile == TileFaces[i].name)
                 {
                     GameObject newTile = Instantiate(TileFaces[i], TileContainer.transform);
+                    tileSetGameObject.Add(newTile);
                     newTile.name = tile;
-                    //print(tile);
-                    //print("A tile face match was found with Tile: " + this.name + " and TileFace: " + gm.TileFaces[i].name);
                     break;
                 }
             }
@@ -633,18 +683,23 @@ public class GameManagerScript : MonoBehaviour
             {
                 case 1:
                     TileContainer.transform.GetChild(0).gameObject.transform.SetParent(Player1Container.transform, false);
+                    Debug.Log(Player1Container.transform.GetChild(Player1Container.transform.childCount - 1).gameObject.name + " to player 1 container");
                     Player1Container.transform.GetChild(Player1Container.transform.childCount - 1).GetComponent<GameTileScript>().toggleTileFace();
+                    Debug.Log(Player1Container.transform.GetChild(Player1Container.transform.childCount - 1).parent.gameObject.name);
                     break;
                 case 2:
                     TileContainer.transform.GetChild(0).gameObject.transform.SetParent(Player2Container.transform, false);
+                    Debug.Log(Player2Container.transform.GetChild(Player2Container.transform.childCount - 1).gameObject.name + " to player 2 container");
                     Player2Container.transform.GetChild(Player2Container.transform.childCount - 1).GetComponent<GameTileScript>().toggleTileFace();
                     break;
                 case 3:
                     TileContainer.transform.GetChild(0).gameObject.transform.SetParent(Player3Container.transform, false);
+                    Debug.Log(Player3Container.transform.GetChild(Player3Container.transform.childCount - 1).gameObject.name + " to player 3 container");
                     Player3Container.transform.GetChild(Player3Container.transform.childCount - 1).GetComponent<GameTileScript>().toggleTileFace();
                     break;
                 case 4:
                     TileContainer.transform.GetChild(0).gameObject.transform.SetParent(Player4Container.transform, false);
+                    Debug.Log(Player4Container.transform.GetChild(Player4Container.transform.childCount - 1).gameObject.name + " to player 4 container");
                     Player4Container.transform.GetChild(Player4Container.transform.childCount - 1).GetComponent<GameTileScript>().toggleTileFace();
                     break;
                 default:
@@ -672,9 +727,16 @@ public class GameManagerScript : MonoBehaviour
         }
 
         CurrentPlayer = 1;
+        Debug.Log("REARRANGE FOR P1");
         RearrangeCards(Player1Container);
+        
+        Debug.Log("REARRANGE FOR P2");
         RearrangeCards(Player2Container);
+
+        Debug.Log("REARRANGE FOR P3");
         RearrangeCards(Player3Container);
+
+        Debug.Log("REARRANGE FOR P4");
         RearrangeCards(Player4Container);
         readyGame = 1;
         turncount = 1;
@@ -726,7 +788,7 @@ public class GameManagerScript : MonoBehaviour
         int discardTile;
         int.TryParse(discardTileName, out discardTile);
         tilesetcount = ComputeHand(player);
-        tilesetcount[discardTile - 1]++;
+        tilesetcount[discardTile]++;
         Debug.Log("AFTER INSERT DISCARD TEMP: " + string.Join(", ", tilesetcount));
         return tilesetcount;
     }
@@ -759,7 +821,7 @@ public class GameManagerScript : MonoBehaviour
             string tileindexstring = RightSidePlayerContainer.transform.GetChild(i).gameObject.name;
             int tileindex;
             int.TryParse(tileindexstring, out tileindex);
-            tilesetcount[tileindex-1]++;
+            tilesetcount[tileindex]++;
         }
         Debug.Log("COMPUTE HAND: " + string.Join(", ", tilesetcount));
 
@@ -824,6 +886,7 @@ public class GameManagerScript : MonoBehaviour
         for (int i = 0; i < CardContainer.transform.childCount; i++)
         {
             tiles.Add(CardContainer.transform.GetChild(i).gameObject);
+            Debug.Log(CardContainer.transform.GetChild(i).gameObject.name);
         }
 
         tiles = tiles.OrderBy(tile => tile.name).ToList();
@@ -831,6 +894,7 @@ public class GameManagerScript : MonoBehaviour
         foreach (GameObject tile in tiles)
         {
             tile.transform.SetSiblingIndex(index);
+            Debug.Log(tile.name);
             index++;
         }
     }
@@ -969,7 +1033,8 @@ public class GameManagerScript : MonoBehaviour
 
     void DestroyOptionButtons()
     {
-        for (int i = 0; i < 3; i++)
+        //for (int i = 0; i < 3; i++)
+        for (int i = 1; i < 4; i++)
         {
             GameObject optionbutton = GameObject.Find("OptionButton" + i);
             //if the button exist then destroy it
@@ -996,7 +1061,6 @@ public class GameManagerScript : MonoBehaviour
         int discardTile = GetDiscardTile();
         int[] playerHand = new int[34];
         playerHand = ComputeHand(GetNextPlayer());
-        discardTile -= 1;
         int meldsetindex = 0;
         //int[][] possiblemeldsets = new int[][] {
         //     new int[3],
@@ -1021,8 +1085,9 @@ public class GameManagerScript : MonoBehaviour
 
             if (discardTile % 9 == 0) //This is only for shift pattern 1,2,3. Ignore i value
             {
-                for (int i = 0 + 9 * suit; i < 1 + 9 * suit; i++)
-                {
+                //for (int i = 0 + 9 * suit; i < 1 + 9 * suit; i++)
+                //{
+                    int i = 0 + 9 * suit;
                     countShift = 0;
                     alrChecked = false;
                     for (int j = i; j < i + 3; j++)
@@ -1035,14 +1100,14 @@ public class GameManagerScript : MonoBehaviour
                         {
                             //activate chow button
                             alrChecked = true;
-                            Debug.Log("CAN CHOW: " + (i + 1) + " - " + (i + 2) + " - " + (i + 3));
-                            possiblemeldsets[meldsetindex] = new int[] { i + 1, i + 2, i + 3 };
+                            Debug.Log("CAN CHOW: " + i + " - " + (i + 1) + " - " + (i + 2));
+                            possiblemeldsets[meldsetindex] = new int[] { i, i + 1, i + 2 };
                             meldsetindex++;
                         }
                     }
-                }
+                //}
             }
-            if (discardTile % 9 == 1)
+            else if (discardTile % 9 == 1)
             {
                 for (int i = 0 + 9 * suit; i < 2 + 9 * suit; i++)
                 {
@@ -1058,16 +1123,16 @@ public class GameManagerScript : MonoBehaviour
                         {
                             //activate chow button
                             alrChecked = true;
-                            Debug.Log("CAN CHOW: " + (i + 1) + " - " + (i + 2) + " - " + (i + 3));
-                            possiblemeldsets[meldsetindex] = new int[] { i + 1, i + 2, i + 3 };
+                            Debug.Log("CAN CHOW: " + i + " - " + (i + 1) + " - " + (i + 2));
+                            possiblemeldsets[meldsetindex] = new int[] { i, i + 1, i + 2 };
                             meldsetindex++;
                         }
                     }
                 }
             }
-            else if (discardTile % 9 > 6)
+            else if (discardTile % 9 == 7)
             {
-                for (int i = 4 + 9 * suit; i < 7 + 9 * suit; i++)
+                for (int i = 5 + 9 * suit; i < 7 + 9 * suit; i++)
                 {
                     countShift = 0;
                     alrChecked = false;
@@ -1081,14 +1146,38 @@ public class GameManagerScript : MonoBehaviour
                         {
                             //activate chow button
                             alrChecked = true;
-                            Debug.Log("CAN CHOW: " + (i + 1) + " - " + (i + 2) + " - " + (i + 3));
-                            possiblemeldsets[meldsetindex] = new int[] { i + 1, i + 2, i + 3 };
+                            Debug.Log("CAN CHOW: " + i + " - " + (i + 1) + " - " + (i + 2));
+                            possiblemeldsets[meldsetindex] = new int[] { i, i + 1, i + 2 };
                             meldsetindex++;
                         }
                     }
                 }
             }
-            else if (discardTile % 9 > 1 && discardTile % 9 < 8)
+            else if (discardTile % 9 == 8)
+            {
+                //for (int i = 6 + 9 * suit; i < 7 + 9 * suit; i++)
+                //{
+                int i = 6 + 9 * suit;
+                countShift = 0;
+                alrChecked = false;
+                for (int j = i; j < i + 3; j++)
+                {
+                    if (playerHand[j] > 0)
+                    {
+                        countShift++;
+                    }
+                    if (countShift == 3 && alrChecked == false)
+                    {
+                        //activate chow button
+                        alrChecked = true;
+                        Debug.Log("CAN CHOW: " + i + " - " + (i + 1) + " - " + (i + 2));
+                        possiblemeldsets[meldsetindex] = new int[] { i, i + 1, i + 2 };
+                        meldsetindex++;
+                    }
+                }
+                //}
+            }
+            else if (discardTile % 9 > 1 && discardTile % 9 < 7)
             {
                 for (int i = discardTile - 2; i < discardTile + 1; i++) //only need to check for wan tong suo
                 {
@@ -1104,8 +1193,8 @@ public class GameManagerScript : MonoBehaviour
                         {
                             //activate chow button
                             alrChecked = true;
-                            Debug.Log("CAN CHOW: " + (i + 1) + " - " + (i + 2) + " - " + (i + 3));
-                            possiblemeldsets[meldsetindex] = new int[] { i + 1, i + 2, i + 3 };
+                            Debug.Log("CAN CHOW: " + i + " - " + (i + 1) + " - " + (i + 2));
+                            possiblemeldsets[meldsetindex] = new int[] { i, i + 1, i + 2 };
                             meldsetindex++;
                         }
                     }
@@ -1119,6 +1208,7 @@ public class GameManagerScript : MonoBehaviour
                 return null;
 
             }
+
             //debugging
             for (int i = 0; i < 3; i++)
             {
@@ -1163,7 +1253,7 @@ public class GameManagerScript : MonoBehaviour
             if (CurrentPlayer != i)
             {
                 Debug.Log("CHECKING FOR PLAYER: " + i);
-                int discardIndex = GetDiscardTile() - 1;
+                int discardIndex = GetDiscardTile();
                 Debug.Log("DISCARD TILE CHECKING: " + discardIndex);
                 int[] playerHand = new int[34];
                 playerHand = ComputeHand(i);
@@ -1311,7 +1401,7 @@ public class GameManagerScript : MonoBehaviour
         {
             if (playerHand[i] == 4)
             {
-                gangtile = i;
+                gangtile = i +1;
                 break;
             }
         }
@@ -1377,6 +1467,7 @@ public class GameManagerScript : MonoBehaviour
                 break;
         }
 
+        if (times == 0) { return; } 
         Debug.Log("GOING TO SHIFT TILES FOR PLAYER " + CurrentPlayer + " AND TAKE TILE " + discardIndex);
         DiscardContainer.transform.GetChild(DiscardContainer.transform.childCount - 1).gameObject.transform.SetParent(PlayerExposedContainer.transform.GetChild(PlayerExposedContainer.transform.childCount - 1).transform);
 
@@ -1391,3 +1482,40 @@ public class GameManagerScript : MonoBehaviour
         }
     }
 }
+
+//public class Player {
+//    public int seat;
+//    public int[] playerHandConcealed;
+//    public int[] playerHandExposed;
+//    //public int bonusTai;
+//    //public bool isWaiting;
+
+//    public Player(int currentIndex) {
+//        this.seat = currentIndex;
+//    }
+
+//    public int[] getPlayerHandConcealed() { 
+        
+//    }
+
+//    public int[] setPlayerHandConcealed()
+//    {
+
+//    }
+
+//    public int[] getPlayerHandExposed()
+//    {
+
+//    }
+
+//    public int[] setPlayerHandExposed()
+//    {
+
+//    }
+//}
+
+//public class GameState {
+//    public int currentWind;
+//    public bool isReady;
+//    public bool inGame;
+//}

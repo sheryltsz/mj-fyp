@@ -28,7 +28,7 @@ public class OptionButtonScript : MonoBehaviour
     void TaskOnClick()
     {
         gm.responded = true;
-        int.TryParse(this.name.Substring(name.Length - 1), out gm.btnSelected);
+        int.TryParse(this.name.Substring(name.Length - 1, 1), out gm.btnSelected);
         Debug.Log(gm.btnSelected);
     }
 
