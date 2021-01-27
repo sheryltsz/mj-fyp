@@ -103,9 +103,6 @@ public class GameManagerScript : MonoBehaviour
         startGame = false;
         while (readyGame == 1)
         {
-            //yield return new WaitForSeconds(10); 
-            //winnerfound = 2;
-            //break;
             if (endofturn == true && winnerfound == -99)
             {
                 endofturn = false;
@@ -157,9 +154,13 @@ public class GameManagerScript : MonoBehaviour
                     }
                     if (responded == true)
                     {
-                        Debug.Log("WaitForResponse OPTION BUTTON - RESPONDED");
+                        Debug.Log("WaitForResponse OPTION BUTTON - RESPONDED " + btnSelected);
                         responded = false;
-                        ExecutePlayerGang();
+
+                        if (btnSelected != 0)
+                        {
+                            ExecutePlayerGang();
+                        }
                     }
                     else
                     {
@@ -167,10 +168,8 @@ public class GameManagerScript : MonoBehaviour
                     }
                     //END OF WAIT FOR PONG GANG RESPONSE
                     DestroyOptionButtons();
-                    Time.timeScale = 1f;
                     Debug.Log("WaitForResponse Completed");
                 }
-
 
                 //================WAIT FOR DISCARD================
                 Debug.Log("ENTER WaitForDiscard");
@@ -217,12 +216,6 @@ public class GameManagerScript : MonoBehaviour
                 ponggangset = CheckForPongGang();
                 if (ponggangset.Contains(true))
                 {
-                    //suppose to insert check for hu after discard (hu player can be anyone with waitinghand = true, not just right side)
-                    //if (CheckForHu(InsertDiscardTemp(GetNextPlayer())))
-                    //{
-                    //    winnerfound = GetNextPlayer();
-                    //    break;
-                    //}
                     DisplayPongGangOptions(ponggangset);
 
                     //WAIT FOR PONG GANG RESPONSE
@@ -240,11 +233,66 @@ public class GameManagerScript : MonoBehaviour
                     {
                         Debug.Log("WaitForResponse OPTION BUTTON - RESPONDED");
                         responded = false;
-                        ExecutePongGang();
+                        if (btnSelected != 0)
+                        {
+                            ExecutePongGang();
+                            DestroyOptionButtons();
+                        }
+                        else
+                        {
+                            DestroyOptionButtons();
+                            ////================CHECK FOR CHOW================
+                            int[][] meldsets = new int[][] {
+                                new int[3],
+                                new int[3],
+                                new int[3]
+                            };
+
+                            meldsets = CheckForChow();
+                            if (meldsets != null)
+                            {
+                                DisplayChowOptions(meldsets);
+
+                                //WAIT FOR CHOW RESPONSE
+                                responded = false;
+                                Debug.Log("Enter WaitForResponse-CHOW");
+                                for (int i = 0; i < 5; i++)
+                                {
+                                    yield return new WaitForSeconds(1);
+                                    if (responded == true)
+                                    {
+                                        break;
+                                    }
+                                }
+                                Debug.Log("EXITED WAIT FOR RESPONSE WAIT 5 SECS LOOP");
+                                if (responded == true)
+                                {
+                                    Debug.Log("WaitForResponse OPTION BUTTON - RESPONDED");
+                                    responded = false;
+                                    if (btnSelected != 0)
+                                    {
+                                        ExecuteChow(meldsets);
+                                    }
+                                    DestroyOptionButtons();
+                                }
+                                else
+                                {
+                                    Debug.Log("WaitForResponse No response but 5 seconds up");
+                                    DestroyOptionButtons();
+                                    NextPlayer();
+                                }
+                                //END OF WAIT FOR CHOW RESPONSE
+                                Debug.Log("WaitForResponse Completed");
+                            }
+                            else {
+                                NextPlayer();
+                            }
+                        }
                     }
                     else
                     {
                         Debug.Log("WaitForResponse No response but 5 seconds up");
+                        DestroyOptionButtons();
                         ////================CHECK FOR CHOW================
                         int[][] meldsets = new int[][] {
                             new int[3],
@@ -255,11 +303,6 @@ public class GameManagerScript : MonoBehaviour
                         meldsets = CheckForChow();
                         if (meldsets != null)
                         {
-                            //if (CheckForHu(InsertDiscardTemp(GetNextPlayer())))
-                            //{
-                            //    winnerfound = GetNextPlayer();
-                            //    break;
-                            //}
                             DisplayChowOptions(meldsets);
 
                             //WAIT FOR CHOW RESPONSE
@@ -278,29 +321,28 @@ public class GameManagerScript : MonoBehaviour
                             {
                                 Debug.Log("WaitForResponse OPTION BUTTON - RESPONDED");
                                 responded = false;
-                                ExecuteChow(meldsets);
+                                if (btnSelected != 0)
+                                {
+                                    ExecuteChow(meldsets);
+                                }
+                                DestroyOptionButtons();
                             }
                             else
                             {
                                 Debug.Log("WaitForResponse No response but 5 seconds up");
+                                DestroyOptionButtons();
                                 NextPlayer();
                             }
                             //END OF WAIT FOR CHOW RESPONSE
-
-                            DestroyOptionButtons();
-                            Time.timeScale = 1f;
                             Debug.Log("WaitForResponse Completed");
                         }
-                        else if (meldsets == null)
+                        else
                         {
                             NextPlayer();
                         }
                         ////================END OF CHECK FOR CHOW================
                     }
                     //END OF WAIT FOR PONG GANG RESPONSE
-                    DestroyOptionButtons();
-                    Time.timeScale = 1f;
-                    Debug.Log("WaitForResponse Completed");
 
                 }
                 //================END OF CHECK FOR PONG================
@@ -309,19 +351,14 @@ public class GameManagerScript : MonoBehaviour
                     //suppose to insert check for hu after discard (hu player can be anyone with waitinghand = true, not just right side)
                     ////================CHECK FOR CHOW================
                     int[][] meldsets = new int[][] {
-                        new int[3],
-                        new int[3],
-                        new int[3]
+                            new int[3],
+                            new int[3],
+                            new int[3]
                     };
 
                     meldsets = CheckForChow();
                     if (meldsets != null)
                     {
-                        //if (CheckForHu(InsertDiscardTemp(GetNextPlayer())))
-                        //{
-                        //    winnerfound = GetNextPlayer();
-                        //    break;
-                        //}
                         DisplayChowOptions(meldsets);
 
                         //WAIT FOR CHOW RESPONSE
@@ -340,26 +377,28 @@ public class GameManagerScript : MonoBehaviour
                         {
                             Debug.Log("WaitForResponse OPTION BUTTON - RESPONDED");
                             responded = false;
-                            ExecuteChow(meldsets);
+                            if (btnSelected != 0)
+                            {
+                                ExecuteChow(meldsets);
+                            }
+                            else { 
+                                NextPlayer();
+                            }
+                            DestroyOptionButtons();
                         }
                         else
                         {
                             Debug.Log("WaitForResponse No response but 5 seconds up");
+                            DestroyOptionButtons();
                             NextPlayer();
                         }
                         //END OF WAIT FOR CHOW RESPONSE
-
-                        DestroyOptionButtons();
-                        Time.timeScale = 1f;
                         Debug.Log("WaitForResponse Completed");
                     }
-                    else if (meldsets == null)
-                    {
+                    else {
                         NextPlayer();
                     }
-                    ////================END OF CHECK FOR CHOW================
                 }
-
                 endofturn = true;
             }
         }
@@ -988,7 +1027,10 @@ public class GameManagerScript : MonoBehaviour
     void DisplayChowOptions(int[][] meldsets)
     {
         GameObject overlayPrefab = Instantiate(OverlayPanelPrefab, GameCanvas.transform);
-
+        overlayPrefab.transform.Find("PlayerLabel").GetComponent<Text>().text = "PLAYER " + GetNextPlayer().ToString();
+        GameObject nothanksButton = Instantiate(OptionsButtonPrefab, overlayPrefab.transform);
+        nothanksButton.name = "OptionButton" + "0";
+        nothanksButton.GetComponentInChildren<Text>().text = "No thanks";
 
         for (int i = 0; i < 3; i++)
         {
@@ -1003,7 +1045,8 @@ public class GameManagerScript : MonoBehaviour
             else
             {
                 GameObject optionButton = Instantiate(OptionsButtonPrefab, overlayPrefab.transform);
-                optionButton.name = "OptionButton" + i.ToString();
+                int temp = i + 1;
+                optionButton.name = "OptionButton" + temp.ToString();
                 optionButton.GetComponentInChildren<Text>().text = meldsets[i][0] + "-" + meldsets[i][1] + "-" + meldsets[i][2];
             }
         }
@@ -1011,30 +1054,40 @@ public class GameManagerScript : MonoBehaviour
 
     void DisplayPongGangOptions(bool[] ponggangset) {
         GameObject overlayPrefab = Instantiate(OverlayPanelPrefab, GameCanvas.transform);
+        overlayPrefab.transform.Find("PlayerLabel").GetComponent<Text>().text = "PLAYER " + pongplayer.ToString();
+        GameObject nothanksButton = Instantiate(OptionsButtonPrefab, overlayPrefab.transform);
+        nothanksButton.name = "OptionButton" + "0";
+        nothanksButton.GetComponentInChildren<Text>().text = "No thanks";
+
         if (ponggangset[0] == true) {
             GameObject optionButton = Instantiate(OptionsButtonPrefab, overlayPrefab.transform);
-            optionButton.name = "OptionButton" + "0";
+            optionButton.name = "OptionButton" + "1";
             optionButton.GetComponentInChildren<Text>().text = "PONG";
         }
         if (ponggangset[1] == true)
         {
             GameObject optionButton = Instantiate(OptionsButtonPrefab, overlayPrefab.transform);
-            optionButton.name = "OptionButton" + "1";
+            optionButton.name = "OptionButton" + "2";
             optionButton.GetComponentInChildren<Text>().text = "GANG";
         }
     }
 
     void DisplayPlayerGangOptions() {
         GameObject overlayPrefab = Instantiate(OverlayPanelPrefab, GameCanvas.transform);
+        overlayPrefab.transform.Find("PlayerLabel").GetComponent<Text>().text = "PLAYER " + CurrentPlayer.ToString();
+        GameObject nothanksButton = Instantiate(OptionsButtonPrefab, overlayPrefab.transform);
+        nothanksButton.name = "OptionButton" + "0";
+        nothanksButton.GetComponentInChildren<Text>().text = "No thanks";
+
         GameObject optionButton = Instantiate(OptionsButtonPrefab, overlayPrefab.transform);
-        optionButton.name = "OptionButton" + "0";
+        optionButton.name = "OptionButton" + "1";
         optionButton.GetComponentInChildren<Text>().text = "GANG";
     }
 
     void DestroyOptionButtons()
     {
         //for (int i = 0; i < 3; i++)
-        for (int i = 1; i < 4; i++)
+        for (int i = 0; i < 4; i++)
         {
             GameObject optionbutton = GameObject.Find("OptionButton" + i);
             //if the button exist then destroy it
@@ -1042,7 +1095,6 @@ public class GameManagerScript : MonoBehaviour
             {
                 Destroy(optionbutton);
                 Debug.Log(optionbutton.name + "has been destroyed.");
-
             }
         }
 
@@ -1294,15 +1346,15 @@ public class GameManagerScript : MonoBehaviour
         //identify which tile isnt discard tile
         switch (btnSelected)
         {
-            case 0:
+            case 1:
                 chosenmeld = meldsets[0];
                 playerchow = true;
                 break;
-            case 1:
+            case 2:
                 chosenmeld = meldsets[1];
                 playerchow = true;
                 break;
-            case 2:
+            case 3:
                 chosenmeld = meldsets[2];
                 playerchow = true;
                 break;
@@ -1452,11 +1504,11 @@ public class GameManagerScript : MonoBehaviour
 
         switch (btnSelected)
         {
-            case 0:
+            case 1:
                 times = 2;
                 playerponggang = true;
                 break;
-            case 1:
+            case 2:
                 times = 3;
                 playerponggang = true;
                 playergang = true;

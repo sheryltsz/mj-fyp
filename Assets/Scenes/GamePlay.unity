@@ -1642,7 +1642,6 @@ MonoBehaviour:
   tiletodiscard: 
   startGame: 0
   tileset: []
-  Tiles: []
   GameCanvas: {fileID: 524399388}
   TilePrefab: {fileID: 100000, guid: 8e0d6a55d5cd30143837eab20b16d733, type: 3}
   TileContainer: {fileID: 2143350176}
