@@ -33,6 +33,8 @@ public class GameManagerScript : MonoBehaviour
     bool[] waitinghand = new bool[] { false,false,false,false };
     bool newGame = true;
     List<GameObject> tileSetGameObject = new List<GameObject>();
+    string freshdrawtile;
+    bool isInExposed = false;
 
     //Bamboo - 0 to 8
     //Character - 9 to 17
@@ -119,7 +121,38 @@ public class GameManagerScript : MonoBehaviour
                         winnerfound = CurrentPlayer;
                         break;
                     }
-                    //if gang - check exposed tiles
+                    //check for gang and if want to
+                    if (CheckForPlayerGang())
+                    {
+                        DisplayPlayerGangOptions();
+                        responded = false;
+                        Debug.Log("Enter WaitForResponse-PLAYERGANG");
+                        for (int i = 0; i < 5; i++)
+                        {
+                            yield return new WaitForSeconds(1);
+                            if (responded == true)
+                            {
+                                break;
+                            }
+                        }
+                        if (responded == true)
+                        {
+                            Debug.Log("WaitForResponse OPTION BUTTON - RESPONDED " + btnSelected);
+                            responded = false;
+
+                            if (btnSelected != 0)
+                            {
+                                ExecutePlayerGang();
+                            }
+                        }
+                        else
+                        {
+                            Debug.Log("WaitForResponse No response but 5 seconds up");
+                        }
+                        //END OF WAIT FOR PONG GANG RESPONSE
+                        DestroyOptionButtons();
+                        Debug.Log("WaitForResponse Completed");
+                    }
                 }
                 else if (turncount != 1 && playerchow == false && playerponggang == false)
                 {
@@ -129,7 +162,38 @@ public class GameManagerScript : MonoBehaviour
                         winnerfound = CurrentPlayer;
                         break;
                     }
-                    //if gang - check exposed tiles
+                    //check for gang and if want to
+                    if (CheckForPlayerGang())
+                    {
+                        DisplayPlayerGangOptions();
+                        responded = false;
+                        Debug.Log("Enter WaitForResponse-PLAYERGANG");
+                        for (int i = 0; i < 5; i++)
+                        {
+                            yield return new WaitForSeconds(1);
+                            if (responded == true)
+                            {
+                                break;
+                            }
+                        }
+                        if (responded == true)
+                        {
+                            Debug.Log("WaitForResponse OPTION BUTTON - RESPONDED " + btnSelected);
+                            responded = false;
+
+                            if (btnSelected != 0)
+                            {
+                                ExecutePlayerGang();
+                            }
+                        }
+                        else
+                        {
+                            Debug.Log("WaitForResponse No response but 5 seconds up");
+                        }
+                        //END OF WAIT FOR PONG GANG RESPONSE
+                        DestroyOptionButtons();
+                        Debug.Log("WaitForResponse Completed");
+                    }
                 }
                 else
                 {
@@ -137,39 +201,6 @@ public class GameManagerScript : MonoBehaviour
                     playerponggang = false;
                 }
                 //================END OF DRAW FROM WALL================
-
-                //check for gang and if want to
-                if (CheckForPlayerGang())
-                {
-                    DisplayPlayerGangOptions();
-                    responded = false;
-                    Debug.Log("Enter WaitForResponse-PLAYERGANG");
-                    for (int i = 0; i < 5; i++)
-                    {
-                        yield return new WaitForSeconds(1);
-                        if (responded == true)
-                        {
-                            break;
-                        }
-                    }
-                    if (responded == true)
-                    {
-                        Debug.Log("WaitForResponse OPTION BUTTON - RESPONDED " + btnSelected);
-                        responded = false;
-
-                        if (btnSelected != 0)
-                        {
-                            ExecutePlayerGang();
-                        }
-                    }
-                    else
-                    {
-                        Debug.Log("WaitForResponse No response but 5 seconds up");
-                    }
-                    //END OF WAIT FOR PONG GANG RESPONSE
-                    DestroyOptionButtons();
-                    Debug.Log("WaitForResponse Completed");
-                }
 
                 //================WAIT FOR DISCARD================
                 Debug.Log("ENTER WaitForDiscard");
@@ -925,7 +956,7 @@ public class GameManagerScript : MonoBehaviour
         for (int i = 0; i < CardContainer.transform.childCount; i++)
         {
             tiles.Add(CardContainer.transform.GetChild(i).gameObject);
-            Debug.Log(CardContainer.transform.GetChild(i).gameObject.name);
+            //Debug.Log(CardContainer.transform.GetChild(i).gameObject.name);
         }
 
         tiles = tiles.OrderBy(tile => tile.name).ToList();
@@ -933,7 +964,7 @@ public class GameManagerScript : MonoBehaviour
         foreach (GameObject tile in tiles)
         {
             tile.transform.SetSiblingIndex(index);
-            Debug.Log(tile.name);
+            //Debug.Log(tile.name);
             index++;
         }
     }
@@ -967,21 +998,25 @@ public class GameManagerScript : MonoBehaviour
         {
             case 1:
                 TileContainer.transform.GetChild(0).gameObject.transform.SetParent(Player1Container.transform, false);
+                freshdrawtile = Player1Container.transform.GetChild(Player1Container.transform.childCount - 1).gameObject.name;
                 Player1Container.transform.GetChild(Player1Container.transform.childCount - 1).GetComponent<GameTileScript>().toggleTileFace();
                 RearrangeCards(Player1Container);
                 break;
             case 2:
                 TileContainer.transform.GetChild(0).gameObject.transform.SetParent(Player2Container.transform, false);
+                freshdrawtile = Player2Container.transform.GetChild(Player2Container.transform.childCount - 1).gameObject.name;
                 Player2Container.transform.GetChild(Player2Container.transform.childCount - 1).GetComponent<GameTileScript>().toggleTileFace();
                 RearrangeCards(Player2Container);
                 break;
             case 3:
                 TileContainer.transform.GetChild(0).gameObject.transform.SetParent(Player3Container.transform, false);
+                freshdrawtile = Player3Container.transform.GetChild(Player3Container.transform.childCount - 1).gameObject.name;
                 Player3Container.transform.GetChild(Player3Container.transform.childCount - 1).GetComponent<GameTileScript>().toggleTileFace();
                 RearrangeCards(Player3Container);
                 break;
             case 4:
                 TileContainer.transform.GetChild(0).gameObject.transform.SetParent(Player4Container.transform, false);
+                freshdrawtile = Player4Container.transform.GetChild(Player4Container.transform.childCount - 1).gameObject.name;
                 Player4Container.transform.GetChild(Player4Container.transform.childCount - 1).GetComponent<GameTileScript>().toggleTileFace();
                 RearrangeCards(Player4Container);
                 break;
@@ -999,21 +1034,25 @@ public class GameManagerScript : MonoBehaviour
         {
             case 1:
                 TileContainer.transform.GetChild(TileContainer.transform.childCount - 1).gameObject.transform.SetParent(Player1Container.transform, false);
+                freshdrawtile = Player1Container.transform.GetChild(Player1Container.transform.childCount - 1).gameObject.name;
                 Player1Container.transform.GetChild(Player1Container.transform.childCount - 1).GetComponent<GameTileScript>().toggleTileFace();
                 RearrangeCards(Player1Container);
                 break;
             case 2:
                 TileContainer.transform.GetChild(TileContainer.transform.childCount - 1).gameObject.transform.SetParent(Player2Container.transform, false);
+                freshdrawtile = Player2Container.transform.GetChild(Player2Container.transform.childCount - 1).gameObject.name;
                 Player2Container.transform.GetChild(Player2Container.transform.childCount - 1).GetComponent<GameTileScript>().toggleTileFace();
                 RearrangeCards(Player2Container);
                 break;
             case 3:
                 TileContainer.transform.GetChild(TileContainer.transform.childCount - 1).gameObject.transform.SetParent(Player3Container.transform, false);
+                freshdrawtile = Player3Container.transform.GetChild(Player3Container.transform.childCount - 1).gameObject.name;
                 Player3Container.transform.GetChild(Player3Container.transform.childCount - 1).GetComponent<GameTileScript>().toggleTileFace();
                 RearrangeCards(Player3Container);
                 break;
             case 4:
                 TileContainer.transform.GetChild(TileContainer.transform.childCount - 1).gameObject.transform.SetParent(Player4Container.transform, false);
+                freshdrawtile = Player4Container.transform.GetChild(Player4Container.transform.childCount - 1).gameObject.name;
                 Player4Container.transform.GetChild(Player4Container.transform.childCount - 1).GetComponent<GameTileScript>().toggleTileFace();
                 RearrangeCards(Player4Container);
                 break;
@@ -1283,15 +1322,57 @@ public class GameManagerScript : MonoBehaviour
         Debug.Log("CHECKING FOR PLAYER: " + CurrentPlayer);
         int[] playerHand = new int[34];
         playerHand = ComputeHand(CurrentPlayer);
-        Debug.Log("PLAYER" + CurrentPlayer + " HAND" + string.Join(",", playerHand));
+        //Debug.Log("PLAYER" + CurrentPlayer + " HAND" + string.Join(",", playerHand));
 
         for (int i = 0; i < 34; i++) {
             if (playerHand[i] == 4)
             {
                 gangplayer = CurrentPlayer;
+                isInExposed = false;
                 return true;
             }
         }
+
+        GameObject PlayerExposedContainer;
+        switch (CurrentPlayer)
+        {
+            case 1:
+                PlayerExposedContainer = Player1ExposedContainer;
+                break;
+            case 2:
+                PlayerExposedContainer = Player2ExposedContainer;
+                break;
+            case 3:
+                PlayerExposedContainer = Player3ExposedContainer;
+                break;
+            case 4:
+                PlayerExposedContainer = Player4ExposedContainer;
+                break;
+            default:
+                PlayerExposedContainer = null;
+                Debug.Log("Invalid player number");
+                break;
+        }
+        Debug.Log("MELD SETS IN EXPOSED: " + PlayerExposedContainer.transform.childCount);
+
+        if (PlayerExposedContainer.transform.childCount != 0)
+        {
+            foreach (Transform setcontainer in PlayerExposedContainer.transform)
+            {
+                if (setcontainer.GetChild(0).gameObject.name == freshdrawtile)
+                {
+                    if (setcontainer.GetChild(1).gameObject.name == freshdrawtile)
+                    {
+                        gangplayer = CurrentPlayer;
+                        isInExposed = true;
+                        return true;
+
+                    }
+
+                }
+            }
+        }
+
 
         return false;
     }
@@ -1420,8 +1501,6 @@ public class GameManagerScript : MonoBehaviour
     void ExecutePlayerGang() {
         int gangtile = -99;
         string gangtilename;
-        int[] playerHand = new int[34];
-        playerHand = ComputeHand(CurrentPlayer);
         GameObject PlayerContainer;
         GameObject PlayerExposedContainer;
         switch (CurrentPlayer)
@@ -1448,26 +1527,41 @@ public class GameManagerScript : MonoBehaviour
                 Debug.Log("Invalid player number");
                 break;
         }
-        GameObject meldsetcontainer = Instantiate(MeldSetContainerPrefab, PlayerExposedContainer.transform);
-        for (int i = 0; i < 34; i++)
+
+        if (isInExposed)
         {
-            if (playerHand[i] == 4)
+            isInExposed = false;
+            foreach (Transform setcontainer in PlayerExposedContainer.transform)
             {
-                gangtile = i +1;
-                break;
+                if (setcontainer.GetChild(0).gameObject.name == freshdrawtile){
+                    PlayerContainer.transform.Find(freshdrawtile).gameObject.transform.SetParent(setcontainer);
+                }
+            }
+
+        }
+        else { 
+            int[] playerHand = new int[34];
+            playerHand = ComputeHand(CurrentPlayer);
+            GameObject meldsetcontainer = Instantiate(MeldSetContainerPrefab, PlayerExposedContainer.transform);
+            for (int i = 0; i < 34; i++)
+            {
+                if (playerHand[i] == 4)
+                {
+                    gangtile = i;
+                    break;
+                }
+            }
+
+            Debug.Log("Gang Tile Converting to string: " + gangtile.ToString());
+            if (gangtile.ToString().Length == 1) { gangtilename = "0" + gangtile.ToString(); }
+            else { gangtilename = gangtile.ToString(); }
+            Debug.Log("Tile Name is: " + gangtilename);
+
+            for (int i = 0; i < 4; i++) {
+                PlayerContainer.transform.Find(gangtilename).gameObject.transform.SetParent(PlayerExposedContainer.transform.GetChild(PlayerExposedContainer.transform.childCount - 1).transform);
             }
         }
-
-        Debug.Log("Gang Tile Converting to string: " + gangtile.ToString());
-        if (gangtile.ToString().Length == 1) { gangtilename = "0" + gangtile.ToString(); }
-        else { gangtilename = gangtile.ToString(); }
-        Debug.Log("Tile Name is: " + gangtilename);
-
-        for (int i = 0; i < 4; i++) {
-            PlayerContainer.transform.Find(gangtilename).gameObject.transform.SetParent(PlayerExposedContainer.transform.GetChild(PlayerExposedContainer.transform.childCount - 1).transform);
-        }
         DrawCardFromBackWall();
-
     }
 
     void ExecutePongGang() {
