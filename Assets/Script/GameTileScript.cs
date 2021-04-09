@@ -31,14 +31,6 @@ public class GameTileScript : MonoBehaviour
         //create indicator to show if face is shown or not
     }
 
-    //HANDLE INTERACTIONS
-    void OnMouseEnter()
-    {
-        //If your mouse hovers over the GameObject with the script attached, output this message
-        //Debug.Log("Mouse is over GameObject." + this.name);
-
-    }
-
     void OnMouseDown()
     {
         //Debug.Log("Mouse click on " + this.name);
@@ -56,13 +48,6 @@ public class GameTileScript : MonoBehaviour
             //Debug.Log("Not current player's tiles, Current player: P" + gm.CurrentPlayer);
         }
 
-    }
-
-
-    void OnMouseExit()
-    {
-        //The mouse is no longer hovering over the GameObject so output this message each frame
-        //Debug.Log("Mouse is no longer on GameObject." + this.name);
     }
 
 }

@@ -11,39 +11,33 @@ using UnityEngine.SceneManagement;
 
 public class GameManagerScript : MonoBehaviour
 {
-    //Player playerA = new Player();
-    //Player playerB = new Player();
-    //Player playerC = new Player();
-    //Player playerD = new Player();
+    public GameObject[] TileFaces;    //Array to store TileFaces by index
+    public int CurrentPlayer; // Current player (current round) - 1/2/3/4
+    int readyGame = 0; //Indicator to show if game is ready to be played (1) or to end game (0)
+    int turncount = 0; //The number of turns this game has currently
+    //int counttime;
+    public bool responded = false; //bool to check if player has responded - this is controlled by GameTileScript/OptionButtonScript
+    int winnerfound = -99; //set to winner (1/2/3/4) if winner is found, else stays at -99 
+    bool endofturn = true; //bool to indicate if end of turn - to run turn loop or not to run
+    public int btnSelected = -99; //to indicate which button the player has selected, left to right 0 1 2 3 - this is controlled by OptionButtonScript
+    public string tiletodiscard = ""; //the name of Tile GameObject to discard - this is controlled by GameTileScript
+    public bool startGame = false; //indicator to start a new game (true) else, false
+    bool newGame = true; // used in SetUpTiles() - if new game, create tileset and spawn tiles, else just reshuffle and rematch tile faces.
+    List<GameObject> tileSetGameObject = new List<GameObject>();  //the unseeen tile set
+    string freshdrawtile; //name of Tile GameObject just drawn from wall - used in DrawCardFromWall() and DrawCardFromBackWall(), also used to check for playerGang
+    bool isInExposed = false; //indicator to check if playerGang tiles (the other 3 of a kind) are in the exposed tiles or players hand
+    int currentWind = 1; //current wind of the game - DONG (1), NAN (2), XI (3), BEI (4)
+    int currentDealer = 1; //current dealer of the round
 
-
-    //STATIC VARIABLES    
-    //public Sprite[] TileFaces;
-    public GameObject[] TileFaces;
-    public int CurrentPlayer;
-    int readyGame = 0;
-    int turncount = 0;
-    int counttime;
-    public bool responded = false;
-    int winnerfound = -99;
-    bool endofturn = true;
-    public int btnSelected = -99;
-    public string tiletodiscard = "";
-    public bool startGame = false;
-    bool[] waitinghand = new bool[] { false,false,false,false };
-    bool newGame = true;
-    List<GameObject> tileSetGameObject = new List<GameObject>();
-    string freshdrawtile;
-    bool isInExposed = false;
-
-    //Bamboo - 0 to 8
-    //Character - 9 to 17
+    //TILE INDEXES
+    //Bamboo - 00 to 08
+    //Character - 09 to 17
     //Dots - 18 to 26
     //Dragon - 27 to 29
     //Wind - 30 to 33
 
     //LISTS VARIABLES
-    public List<string> tileset;
+    public List<string> tileset; // used in setting up tiles
 
     //GAME OBJECTS VARIABLES
     public GameObject GameCanvas;
@@ -62,112 +56,139 @@ public class GameManagerScript : MonoBehaviour
     public GameObject OptionsButtonPrefab;
     public GameObject MeldSetContainerPrefab;
     public GameObject GameOverPanelPrefab;
+    public GameObject CurrentWindText;
+    public GameObject DealerText;
 
-    //SCRIPTS VARIABLES
-    InputManagerScript inputmanager;
-
-    bool playerchow = false;
-    bool playerponggang = false;
-    int pongplayer = -99;
-    int gangplayer = -99;
-    bool playergang = false;
+    bool playerchow = false; //indicator if a player has just performed chow (this would be the next player of the player who just discarded tile)
+    bool playerponggang = false; //indicator if a player has just performed pong/gang
+    int pongplayer = -99; //record pongplayer if the player has just performed pong (will be next player)
+    int gangplayer = -99; //record gangplayer if the player has just performed gang (will be next player)
+    bool playergang = false; //indicator if a player has just performed gang
 
     // Start is called before the first frame update
     void Start()
     {
         //INITIALISATION
-        inputmanager = FindObjectOfType<InputManagerScript>();
-        startGame = true;
+        startGame = true; //start new game indicator
     }
 
     // Update is called once per frame
     void Update()
     {
-        if (turncount == 84)
-        {
-            readyGame = 0;
-            //end the game
-        }
         if (startGame)
         {
-            startGame = false;
-            StartCoroutine(GameLoop());
+            startGame = false; //prevent setuptiles in gameloop from running twice)
+            StartCoroutine(GameLoop()); //start gameloop
         }
 
     }
 
-    //Check Hu must implement AFTER:
-    //DrawCardFromBackWall, DrawCardFromWall
-    //Check Hu must implement RIGHT AFTER **ALL** tile discarded
-
+    //MAIN GAME LOOP HERE
     IEnumerator GameLoop() {
+
+        //Setting up tiles
         SetupTiles();
         startGame = false;
+
+        //this TURN loop runs while the unseen tile stack still have sufficient tiles to continue running (last tile shall be the 16th tile from the back)
         while (readyGame == 1)
         {
+            //this check if the previous player has ended his turn and no winner is found yet
             if (endofturn == true && winnerfound == -99)
             {
+                //set to false immediately as the next player has started his turn
                 endofturn = false;
                 Debug.Log("TURNCOUNT: " + turncount);
 
-                //================DRAW FROM WALL================
-                //check !first round and !just chow/pong
+                //check that this is not the first round (as the first player would have already drawn an extra tile the first round - do not need to draw a new tile) 
+                //playergang == true means that a player has just performed gang move and can now draw a tile from the back wall
                 if (turncount != 1 && playergang == true)
                 {
                     playergang = false;
+                    playerponggang = false;
                     DrawCardFromBackWall();
+                    
+                    //if player wins
                     if (CheckForHu(ComputeHand(CurrentPlayer)))
                     {
                         winnerfound = CurrentPlayer;
                         break;
+                    }                    
+                    
+                    //if not enough tiles in wall anymore
+                    if (readyGame == 0) {
+                        break;
                     }
-                    //check for gang and if want to
+
+                    //check for gang with the new drawn tile from back of wall and ask if player want to
                     if (CheckForPlayerGang())
                     {
                         DisplayPlayerGangOptions();
                         responded = false;
                         Debug.Log("Enter WaitForResponse-PLAYERGANG");
+
+                        //5 seconds to respond
                         for (int i = 0; i < 5; i++)
                         {
                             yield return new WaitForSeconds(1);
                             if (responded == true)
                             {
+                                //break if responded
                                 break;
                             }
                         }
+                        //END OF WAIT FOR PONG GANG RESPONSE
+
+                        //if responded, 
                         if (responded == true)
                         {
                             Debug.Log("WaitForResponse OPTION BUTTON - RESPONDED " + btnSelected);
                             responded = false;
 
+                            //check if player selected an option other than "No Thanks"
                             if (btnSelected != 0)
                             {
+                                //Perform gang move for player
                                 ExecutePlayerGang();
                             }
                         }
+                        //did not respond
                         else
                         {
                             Debug.Log("WaitForResponse No response but 5 seconds up");
                         }
-                        //END OF WAIT FOR PONG GANG RESPONSE
+                        
+                        //remove options interface and continue game
                         DestroyOptionButtons();
                         Debug.Log("WaitForResponse Completed");
                     }
                 }
+                //check if current round is not the first round, and player DID NOT just chow and player DID NOT just pong/gang
                 else if (turncount != 1 && playerchow == false && playerponggang == false)
                 {
                     DrawCardFromWall();
+
+                    //if wall does not have sufficient tiles, end game
+                    if (readyGame == 0)
+                    {
+                        break;
+                    }
+
+                    //Check if CURRENT player has won with the newly drawn tile
                     if (CheckForHu(ComputeHand(CurrentPlayer)))
                     {
                         winnerfound = CurrentPlayer;
                         break;
                     }
-                    //check for gang and if want to
+
+                    //check for CURRENT player is able to perform gang move with newly drawn tile and if player wants to
                     if (CheckForPlayerGang())
                     {
                         DisplayPlayerGangOptions();
                         responded = false;
                         Debug.Log("Enter WaitForResponse-PLAYERGANG");
+
+                        //wait for player response for 5 seconds - responded will be accessed from OptionButtonScript if player responses
                         for (int i = 0; i < 5; i++)
                         {
                             yield return new WaitForSeconds(1);
@@ -176,13 +197,16 @@ public class GameManagerScript : MonoBehaviour
                                 break;
                             }
                         }
+                        //END OF WAIT FOR PONG GANG RESPONSE
                         if (responded == true)
                         {
                             Debug.Log("WaitForResponse OPTION BUTTON - RESPONDED " + btnSelected);
                             responded = false;
 
+                            //check if player selected an option other than "No Thanks"
                             if (btnSelected != 0)
                             {
+                                //perform player gang move
                                 ExecutePlayerGang();
                             }
                         }
@@ -190,11 +214,14 @@ public class GameManagerScript : MonoBehaviour
                         {
                             Debug.Log("WaitForResponse No response but 5 seconds up");
                         }
-                        //END OF WAIT FOR PONG GANG RESPONSE
+                        
+
+                        //remove options display from screen
                         DestroyOptionButtons();
                         Debug.Log("WaitForResponse Completed");
                     }
                 }
+                //if player just performed chow/pong move, they cannot draw tile from wall this turn, hence reset indicator and move onto discard phase 
                 else
                 {
                     playerchow = false;
@@ -202,11 +229,15 @@ public class GameManagerScript : MonoBehaviour
                 }
                 //================END OF DRAW FROM WALL================
 
+
+
                 //================WAIT FOR DISCARD================
                 Debug.Log("ENTER WaitForDiscard");
+                //Wait for player to discard a tile for up to 5 seconds
                 for (int i = 0; i < 5; i++)
                 {
                     yield return new WaitForSeconds(1);
+                    //if user responses, exit this waiting loop
                     if (responded == true)
                     {
                         break;
@@ -215,20 +246,26 @@ public class GameManagerScript : MonoBehaviour
                 if (responded == true)
                 {
                     Debug.Log("RESPONDED");
+                    //reset indicator
                     responded = false;
+                    //discard the tile the player has chosen, tiletodiscard is written by GameTileScript
                     DiscardTile(tiletodiscard);
                 }
                 else
                 {
                     Debug.Log("No response but 5 seconds up");
+                    //if no response from player, discard most right tile in the player's hand
                     DiscardMostRightTile();
                 }
                 //================END OF WAIT FOR DISCARD================
-                //CHECK FOR HU for players that are waitinghand = true;
+
+                //================CHECK FOR WIN================
+                //Loop through every player and check if any player can win (HU), priority goes to player index in the sequence: currentplayer > currentplayer+1 > currentplayer + 2 > currentplayer + 3
                 for (int i = 1; i < 5; i++)
                 {
                     if (i != CurrentPlayer)
                     {
+                        //insert the discarded tile into player hand and check if player is able to win
                         if (CheckForHu(InsertDiscardTemp(i)))
                         {
                             winnerfound = i;
@@ -237,24 +274,32 @@ public class GameManagerScript : MonoBehaviour
                     }
 
                 }
+                //if a winner is found, exit this game loop
                 if (winnerfound != -99)
                 {
                     break;
                 }
+                //================END OF CHECK FOR WIN================
 
                 //================CHECK FOR PONG================
+                //this bool[] ponggangset represents if player is qualified pong (ponggang[0]) and if player is qualified to perform gang (ponggang[1]). The player is qualified to perform pong if he has 2 of the same tile (same as the discarded tile) in his hand. If the player has 3 of the same tile (same as the discarded tile) in his hand, he is qualified to perform gang.
                 bool[] ponggangset = new bool[2];
+
+                //CheckForPongGang return the bool results after running checks
                 ponggangset = CheckForPongGang();
+
+                //if the player is qualified to perform EITHER pong or gang move, display options to the qualifying player.
                 if (ponggangset.Contains(true))
                 {
                     DisplayPongGangOptions(ponggangset);
 
-                    //WAIT FOR PONG GANG RESPONSE
+                    //WAIT FOR PONG GANG RESPONSE for 5 seconds
                     responded = false;
                     Debug.Log("Enter WaitForResponse-PONGGANG");
                     for (int i = 0; i < 5; i++)
                     {
                         yield return new WaitForSeconds(1);
+                        //if player responds, exit waiting loop. responded is written by OptionButtonScript
                         if (responded == true)
                         {
                             break;
@@ -264,48 +309,63 @@ public class GameManagerScript : MonoBehaviour
                     {
                         Debug.Log("WaitForResponse OPTION BUTTON - RESPONDED");
                         responded = false;
+                        //if player chooses to perform either pong/gang move, execute the move and destroy the options display
                         if (btnSelected != 0)
                         {
                             ExecutePongGang();
                             DestroyOptionButtons();
                         }
+                        //else, destroy options display and move on to check for any qualifying chow moves from the next player
+                        //do take note that the pong/gang move has priority over the chow move, hence this flow.
                         else
                         {
                             DestroyOptionButtons();
-                            ////================CHECK FOR CHOW================
+
+                            //================CHECK FOR CHOW================
+                            //there are a maximum of 3 possible ways the chow move can be performed on a qualifying discarded tile
+                            // e.g., if 5 is the discarded tile, the chow move can be performed in the following sets: 3-4-5, 4-5-6, or 5-6-7
+                            //hence, we prepare an array of size 3, with each elements carrying an array of size 3.
                             int[][] meldsets = new int[][] {
                                 new int[3],
                                 new int[3],
                                 new int[3]
                             };
 
+                            //CheckForChow will return the possible meldsets if any.
                             meldsets = CheckForChow();
+                            //if the meldsets returned contains atleast 1 possible way of performing the chow move, we display the option(s) to the next player (qualifying player)
                             if (meldsets != null)
                             {
                                 DisplayChowOptions(meldsets);
 
-                                //WAIT FOR CHOW RESPONSE
+                                //WAIT FOR CHOW RESPONSE for up to 5 seconds
                                 responded = false;
                                 Debug.Log("Enter WaitForResponse-CHOW");
                                 for (int i = 0; i < 5; i++)
                                 {
                                     yield return new WaitForSeconds(1);
+                                    //if player responses, exit waiting loop
                                     if (responded == true)
                                     {
+                                        //responded is written by OptionButtonScript
                                         break;
                                     }
                                 }
                                 Debug.Log("EXITED WAIT FOR RESPONSE WAIT 5 SECS LOOP");
+
+                                //if player responseded, 
                                 if (responded == true)
                                 {
                                     Debug.Log("WaitForResponse OPTION BUTTON - RESPONDED");
                                     responded = false;
+                                    //if player did not select "No thanks" option, execute the chow move according to player's choice and destory options display
                                     if (btnSelected != 0)
                                     {
                                         ExecuteChow(meldsets);
                                     }
                                     DestroyOptionButtons();
                                 }
+                                //if no response from player, destroy options display, assign next player and move on to the next player (enter TURN loop again)
                                 else
                                 {
                                     Debug.Log("WaitForResponse No response but 5 seconds up");
@@ -314,17 +374,21 @@ public class GameManagerScript : MonoBehaviour
                                 }
                                 //END OF WAIT FOR CHOW RESPONSE
                                 Debug.Log("WaitForResponse Completed");
+                                //================END CHECK FOR CHOW================
                             }
+                            //if there are no possible ways to perform the chow move, assign the next player and move on to the next player (enter TURN loop again)
                             else {
                                 NextPlayer();
                             }
                         }
                     }
+                    //if the qualifying pong player did not respond, no pong move is executed. Hence, we check for any possible chow move for the next player
                     else
                     {
                         Debug.Log("WaitForResponse No response but 5 seconds up");
                         DestroyOptionButtons();
                         ////================CHECK FOR CHOW================
+                        //this is the same code as the previous CHECK FOR CHOW SECTION ABOVE - same comments
                         int[][] meldsets = new int[][] {
                             new int[3],
                             new int[3],
@@ -377,10 +441,12 @@ public class GameManagerScript : MonoBehaviour
 
                 }
                 //================END OF CHECK FOR PONG================
+
+                //if no player qualifies for a pong/gang move, we check for any possible chow move for the next player immediately.
                 else
                 {
-                    //suppose to insert check for hu after discard (hu player can be anyone with waitinghand = true, not just right side)
                     ////================CHECK FOR CHOW================
+                    //this is the same code as the previous CHECK FOR CHOW SECTION ABOVE - same comments
                     int[][] meldsets = new int[][] {
                             new int[3],
                             new int[3],
@@ -429,22 +495,102 @@ public class GameManagerScript : MonoBehaviour
                     else {
                         NextPlayer();
                     }
+                    ////================END OF CHECK FOR CHOW================
                 }
+
+                //regardless of any pong/gang/chow move or no extra moves from other players, we indicate the current turn has ended and we are ready for the next turn. repeat TURN LOOP for next player.
                 endofturn = true;
             }
         }
+        //END OF TURN LOOP 
+
+        //if a winner is found, OR is readyGame = 0 (means that there are no longer sufficient tiles in the wall, we end the game by displaying game over menu), we end the game by displaying the game over menu
         GameOverMenu();
 
-    }
+    }   
 
+    //this function instantiates the gameoverdisplay with a play again button and the result of the game that just ended - winner shown or if drawn, "NO WINNER"
     void GameOverMenu()
     {
         GameObject gameOverPanel = Instantiate(GameOverPanelPrefab, GameCanvas.transform);
-        gameOverPanel.gameObject.transform.Find("WinnerText").GetComponent<Text>().text = "WINNER: " + winnerfound;
+        if (winnerfound == -99)
+        {
+            gameOverPanel.gameObject.transform.Find("WinnerText").GetComponent<Text>().text = "NO WINNER";
+        }
+        else {
+            gameOverPanel.gameObject.transform.Find("WinnerText").GetComponent<Text>().text = "WINNER: " + winnerfound;
+        }
+
     }
 
+    //this functions changes the dealer if the player decides to continue playing (play again)
+    void ChangeDealer() {
+        //set the current dealer label to inactive
+        DealerText.transform.Find("DEALER" + currentDealer).gameObject.SetActive(false);
+
+        //if current dealer is 4, next dealer shall be 1. this also indicates that the dealer label has gone through from player 1 to 4, and the game is ready to move on to the next wind of the game. (DONG - NAN - XI - BEI)
+        if (currentDealer == 4)
+        {
+            currentDealer = 1;
+            UpdateWind();
+        }
+        //if current dealer is 1, 2 or 3, the next dealer shall be 2, 3 or 4 respectively.
+        else {
+            currentDealer++;
+        }
+
+        //find the label that belongs to the next dealer and set it to active
+        DealerText.transform.Find("DEALER" + currentDealer).gameObject.SetActive(true);
+    }
+
+    //this functions updates the wind of the game when called
+    void UpdateWind() {
+        string windText;
+        //if the currentWind of the game is 4, and this function has been called, it is now ready to restart the game from the first wind - DONG. therefore we set it to 1.
+        if (currentWind == 4)
+        {
+            currentWind = 1;
+        }
+        //else we move on to the next wind in the order 1 - 2 - 3 - 4
+        else
+        {
+            currentWind++;
+        }
+
+        //matching the numbers to the correct string representation DONG - NAN - XI - BEI
+        switch (currentWind)
+        {
+            case 1:
+                windText = "DONG";
+                break;
+            case 2:
+                windText = "NAN";
+                break;
+            case 3:
+                windText = "XI";
+                break;
+            case 4:
+                windText = "BEI";
+                break;
+            default:
+                windText = "";
+                break;
+
+        }
+        //update wind label
+        CurrentWindText.GetComponent<Text>().text = "CURRENT WIND: " + windText;
+    }
+
+    //when a player chooses to play again, we have to the clear the canvas and reset the game back to original
     public void ClearCanvas() {
 
+        //if the game that just ended, did not end with a draw or the current dealer was not the winner, we move on to the next dealer
+        if ((winnerfound != -99) && (winnerfound != currentDealer))
+        {
+            ChangeDealer();
+        }
+
+        //resetting all the indicators back to 0 and all other counters
         playerchow = false;
         playerponggang = false;
         pongplayer = -99;
@@ -459,11 +605,8 @@ public class GameManagerScript : MonoBehaviour
         btnSelected = -99;
         tiletodiscard = "";
         startGame = false;
-        for (int i = 0; i < 4; i++)
-        {
-            waitinghand[i] = false;
-        }
 
+        //shift all the tiles back to the unseen tile container, be it in the discarded tile container, players container or players exposed containers. and set them back to facing down
         foreach (GameObject tile in tileSetGameObject) {
             if (tile.transform.parent != TileContainer.transform) { 
                 tile.transform.SetParent(TileContainer.transform, false);
@@ -472,197 +615,48 @@ public class GameManagerScript : MonoBehaviour
             }
         }
 
+        //remove game over menu display
         GameObject gameOverPanel = GameObject.Find("GameOverPanel(Clone)");
         if (gameOverPanel)
         {
             Destroy(gameOverPanel);
         }
 
+        //destroy all meldcontainers
         foreach (GameObject meldcontainer in GameObject.FindGameObjectsWithTag("MeldContainer")) {
             Destroy(meldcontainer);
         }
     }
-    public int[] checkTileSet(int[] handSet)
-    {
-        int[] sCount = shiftFirstCheck(handSet);
-        int[] mCount = meldFirstCheck(handSet);
-        Debug.Log("meldFirst Count: " + mCount[0] + " meldFirst Eye: " + mCount[1]);
-        Debug.Log("shiftFirst Count: " + sCount[0] + " shiftFirst Eye: " + sCount[1]);
 
-        if (mCount[0] > sCount[0])
-        {
-            return mCount;
-        }
-        return sCount;
-    }
-
-    int[] meldFirstCheck(int[] playerHand)
-    {
-        int[] tempHand = new int[34];
-        Array.Copy(playerHand, tempHand, 34);
-        int[] totalCount = new int[2] { 0, 0 };
-
-        for (int i = 0; i < 34; i++) //Check for pong
-        {
-            if (tempHand[i] == 3)
-            {
-                tempHand[i] -= 3;
-                totalCount[0] += 1;
-            }
-        }
-        for (int x = 0; x < 3; x++) //To keep track of the 3 suits and check for shifts
-        {
-            for (int i = 0 + 9 * x; i < 7 + 9 * x; i++) //only need to check for wan tong suo
-            {
-                int countShift = 0;
-                for (int j = i; j < i + 3; j++)
-                {
-                    if (tempHand[j] > 0)
-                    {
-                        countShift++;
-                    }
-                    if (countShift == 3)
-                    {
-                        for (int k = 0; k < 3; k++)
-                        {
-                            tempHand[i + k] -= 1;
-                        }
-                        i = -1;
-                        totalCount[0] += 1;
-                    }
-                }
-            }
-        }
-
-        for (int i = 0; i < 34; i++) //Check for eye
-        {
-            if (tempHand[i] == 2)
-            {
-                tempHand[i] -= 2;
-                totalCount[1] += 1;
-            }
-        }
-
-        return totalCount;
-    }
-
-    int[] shiftFirstCheck(int[] playerHand)
-    {
-        int[] tempHand = new int[34];
-        Array.Copy(playerHand, tempHand, 34);
-        //temp hand shall be remaining tiles in the player's container (not exposed)
-        int[] totalCount = new int[2] { 0, 0 };
-
-        for (int x = 0; x < 3; x++) //To keep track of the 3 suits and check for shifts
-        {
-            for (int i = 0 + 9 * x; i < 7 + 9 * x; i++) //check chow - only need to check for wan tong suo
-            {
-                int countShift = 0;
-                for (int j = i; j < i + 3; j++)
-                {
-                    if (tempHand[j] > 0)
-                    {
-                        countShift++;
-                    }
-                    if (countShift == 3)
-                    {
-                        for (int k = 0; k < 3; k++)
-                        {
-                            tempHand[i + k] -= 1;
-                        }
-                        i = -1;
-                        totalCount[0] += 1;
-                    }
-                }
-            }
-        }
-        for (int i = 0; i < 34; i++) //Check for pong
-        {
-            if (tempHand[i] == 3)
-            {
-                tempHand[i] -= 3;
-                totalCount[0] += 1;
-            }
-        }
-        for (int i = 0; i < 34; i++) //Check for eye
-        {
-            if (tempHand[i] == 2)
-            {
-                tempHand[i] -= 2;
-                totalCount[1] += 1;
-            }
-        }
-        return totalCount;
-    }
-
-    bool CheckForHu(int[] playerHand) {
-        int[] tempHand = new int[34];
-        Array.Copy(playerHand, tempHand, 34);
-        int[] tempCount = checkTileSet(tempHand);
-        int concealedtiles = GetConcealedTiles(tempHand);
-        Debug.Log("concealed tiles count = " + concealedtiles);
-        int requiredmelds = 0;
-        switch (concealedtiles) {
-            case 14:
-                requiredmelds = 4;
-                break;
-            case 11:
-                requiredmelds = 3;
-                break;
-            case 8:
-                requiredmelds = 2;
-                break;
-            case 5:
-                requiredmelds = 1;
-                break;
-            case 2:
-                requiredmelds = 0;
-                break;
-            default:
-                requiredmelds = 99;
-                break;
-        }
-        Debug.Log("CHECK FOR HU ENTERED, CURRENT REQUIRED MELDS: " + requiredmelds);
-        if (tempCount[0] == requiredmelds && tempCount[1] == 1)
-        {
-            Debug.Log("CAN HU");
-            return true;
-        }
-        else {
-            Debug.Log("CANNOT HU");
-            return false;
-        }
-    }
-
-    int GetConcealedTiles(int[] playerHand) { 
-        Debug.Log("GetConcealedTiles received: " + string.Join(", ", playerHand));
-        int totaltiles = 0;
-        for (int i = 0; i < 34; i++) {
-            totaltiles = totaltiles + playerHand[i];
-        }
-        Debug.Log("TOTAL CONCEALED TILES: " + totaltiles);
-        return totaltiles;
-    }
-
+    //this function sets up the tiles for a game
     void SetupTiles()
     {
-
+        //if this is the first game, we generate the tileset, create tileset, set all dealer labels to inactive except for player 1, and display wind text.
         if (newGame) {         
             tileset = GenerateTileSet();
             Shuffle(tileset);
             CreateTileSet();
             newGame = false;
+            DealerText.transform.Find("DEALER2").gameObject.SetActive(false);
+            DealerText.transform.Find("DEALER3").gameObject.SetActive(false);
+            DealerText.transform.Find("DEALER4").gameObject.SetActive(false);
+            DealerText.transform.Find("DEALER1").gameObject.SetActive(true);
+            CurrentWindText.GetComponent<Text>().text = "CURRENT WIND: DONG";   
         }
+        //if player has just selected to play again, we shuffle the tileset and rematch the tileset to its tile faces.
         else
         {
             Shuffle(tileset);
             RematchTiles();
         }
         Debug.Log("TILESET: " + string.Join(", ", tileset));
+
+        //deal 13 tiles to all player except the dealer. dealer gets 14.
         DealTiles();
         Debug.Log("TILESET COUNT: " + tileset.Count);
     }
 
+    //this function generates the tileset by index in a list
     static List<string> GenerateTileSet()
     {
 
@@ -708,7 +702,9 @@ public class GameManagerScript : MonoBehaviour
         }
     }
 
+    //this function rematches the tiles in TileContainer according to the tileset sequence that has been shuffled.
     void RematchTiles() {
+        //tileindex is the position the tile shall be in, in the tilecontainer.
         int tileindex = 0;
         foreach (string tile in tileset)
         {
@@ -723,7 +719,8 @@ public class GameManagerScript : MonoBehaviour
         }
     }
 
-    //spawn deck cards
+
+    //Instantiate tiles according to the tileset order and match the correct tile faces to the back facving tile. this create the gametile object.
     void CreateTileSet()
     {
         foreach (string tile in tileset)
@@ -741,10 +738,10 @@ public class GameManagerScript : MonoBehaviour
         }
     }
 
-    //deal cards to player 1 and player 2 hands
+    //deal tiles to players starting with the dealer and ending at the dealer. so dealer gets an extra tile. every player should receive 13 tiles while the dealer receives 14.
     void DealTiles()
     {
-        int playernow = 1;
+        int playernow = currentDealer;
 
         for (int i = 0; i < 53; i++)
         {
@@ -796,7 +793,10 @@ public class GameManagerScript : MonoBehaviour
             }
         }
 
-        CurrentPlayer = 1;
+        //set the dealer as the first player of this game.
+        CurrentPlayer = currentDealer;
+
+        //rearrange all tiles according to their index in all players container.
         Debug.Log("REARRANGE FOR P1");
         RearrangeCards(Player1Container);
         
@@ -808,17 +808,22 @@ public class GameManagerScript : MonoBehaviour
 
         Debug.Log("REARRANGE FOR P4");
         RearrangeCards(Player4Container);
+
+        //the game is ready to be played and turn count starts at 1
         readyGame = 1;
         turncount = 1;
     }
 
+    //get parent of the tile
     public string GetParent(Component card)
     {
         return card.gameObject.transform.parent.name;
     }
 
+    //discard the tile that the player has selected to discard
     public void DiscardTile(string tiletodiscard)
     {
+        //find player's tile container (not the exposed ones)
         GameObject playerContainer;
         switch (CurrentPlayer)
         {
@@ -839,9 +844,11 @@ public class GameManagerScript : MonoBehaviour
                 playerContainer = null;
                 break;
         }
+        //find the tile in the player's container and set its parent to the discard container. this performs the discarding move
         playerContainer.gameObject.transform.Find(tiletodiscard).gameObject.transform.SetParent(DiscardContainer.transform);
     }
 
+    //retrieve the newly discarded tile from the discard container, returns the index of the tile.
     int GetDiscardTile()
     {
         string discardTileName = DiscardContainer.transform.GetChild(DiscardContainer.transform.childCount - 1).gameObject.name;
@@ -852,6 +859,7 @@ public class GameManagerScript : MonoBehaviour
         return discardTile;
     }
 
+    //temporarily inserts the newly discard tile into the given player's hand.
     int[] InsertDiscardTemp(int player) {
         int[] tilesetcount = new int[34];
         string discardTileName = DiscardContainer.transform.GetChild(DiscardContainer.transform.childCount - 1).gameObject.name;
@@ -863,41 +871,48 @@ public class GameManagerScript : MonoBehaviour
         return tilesetcount;
     }
 
+    //compute the given player's hand into a format:
+    //where 2 tiles of index 5 would make set tilesetcount[5] = 2;
     int[] ComputeHand(int player)
     {
-        GameObject RightSidePlayerContainer;
+        GameObject GivenPlayerContainer;
         int[] tilesetcount = new int[34];
+
+        //get the given player's container (not including exposed tiles)
         switch (player)
         {
             case 1:
-                RightSidePlayerContainer = Player1Container;
+                GivenPlayerContainer = Player1Container;
                 break;
             case 2:
-                RightSidePlayerContainer = Player2Container;
+                GivenPlayerContainer = Player2Container;
                 break;
             case 3:
-                RightSidePlayerContainer = Player3Container;
+                GivenPlayerContainer = Player3Container;
                 break;
             case 4:
-                RightSidePlayerContainer = Player4Container;
+                GivenPlayerContainer = Player4Container;
                 break;
             default:
-                RightSidePlayerContainer = null;
+                GivenPlayerContainer = null;
                 Debug.Log("Invalid player number");
                 break;
         }
-        for (int i = 0; i < RightSidePlayerContainer.transform.childCount; i++)
+        //compute hand according to the format mentioned
+        for (int i = 0; i < GivenPlayerContainer.transform.childCount; i++)
         {
-            string tileindexstring = RightSidePlayerContainer.transform.GetChild(i).gameObject.name;
+            string tileindexstring = GivenPlayerContainer.transform.GetChild(i).gameObject.name;
             int tileindex;
             int.TryParse(tileindexstring, out tileindex);
             tilesetcount[tileindex]++;
         }
         Debug.Log("COMPUTE HAND: " + string.Join(", ", tilesetcount));
 
+        //returns this computed hand format
         return tilesetcount;
     }
 
+    //set the correct next player in the order 1 - 2 - 3 - 4
     public void NextPlayer()
     {
         switch (CurrentPlayer)
@@ -922,6 +937,7 @@ public class GameManagerScript : MonoBehaviour
         turncount++;
     }
 
+    //returns the next possible player - used for checking chow move
     int GetNextPlayer()
     {
         int temp;
@@ -949,6 +965,7 @@ public class GameManagerScript : MonoBehaviour
         }
     }
 
+    //rearrange tiles in the container according to their index (increasing order, left to right)
     public void RearrangeCards(GameObject CardContainer)
     {
         List<GameObject> tiles = new List<GameObject>();
@@ -956,7 +973,6 @@ public class GameManagerScript : MonoBehaviour
         for (int i = 0; i < CardContainer.transform.childCount; i++)
         {
             tiles.Add(CardContainer.transform.GetChild(i).gameObject);
-            //Debug.Log(CardContainer.transform.GetChild(i).gameObject.name);
         }
 
         tiles = tiles.OrderBy(tile => tile.name).ToList();
@@ -964,11 +980,12 @@ public class GameManagerScript : MonoBehaviour
         foreach (GameObject tile in tiles)
         {
             tile.transform.SetSiblingIndex(index);
-            //Debug.Log(tile.name);
             index++;
         }
     }
 
+
+    //discards most right tile in players hand (not including tiles in exposed container)
     void DiscardMostRightTile()
     {
         switch (CurrentPlayer)
@@ -991,95 +1008,120 @@ public class GameManagerScript : MonoBehaviour
         }
     }
 
+    //draws a tile from the wall and set tile's parent to be current player's tile container
     void DrawCardFromWall()
     {
-        Debug.Log("Draw From Wall");
-        switch (CurrentPlayer)
+        //if the unseen tile container has less than 16 cards, end game.
+        if (TileContainer.transform.childCount < 16)
         {
-            case 1:
-                TileContainer.transform.GetChild(0).gameObject.transform.SetParent(Player1Container.transform, false);
-                freshdrawtile = Player1Container.transform.GetChild(Player1Container.transform.childCount - 1).gameObject.name;
-                Player1Container.transform.GetChild(Player1Container.transform.childCount - 1).GetComponent<GameTileScript>().toggleTileFace();
-                RearrangeCards(Player1Container);
-                break;
-            case 2:
-                TileContainer.transform.GetChild(0).gameObject.transform.SetParent(Player2Container.transform, false);
-                freshdrawtile = Player2Container.transform.GetChild(Player2Container.transform.childCount - 1).gameObject.name;
-                Player2Container.transform.GetChild(Player2Container.transform.childCount - 1).GetComponent<GameTileScript>().toggleTileFace();
-                RearrangeCards(Player2Container);
-                break;
-            case 3:
-                TileContainer.transform.GetChild(0).gameObject.transform.SetParent(Player3Container.transform, false);
-                freshdrawtile = Player3Container.transform.GetChild(Player3Container.transform.childCount - 1).gameObject.name;
-                Player3Container.transform.GetChild(Player3Container.transform.childCount - 1).GetComponent<GameTileScript>().toggleTileFace();
-                RearrangeCards(Player3Container);
-                break;
-            case 4:
-                TileContainer.transform.GetChild(0).gameObject.transform.SetParent(Player4Container.transform, false);
-                freshdrawtile = Player4Container.transform.GetChild(Player4Container.transform.childCount - 1).gameObject.name;
-                Player4Container.transform.GetChild(Player4Container.transform.childCount - 1).GetComponent<GameTileScript>().toggleTileFace();
-                RearrangeCards(Player4Container);
-                break;
-            default:
-                Debug.Log("Invalid player number");
-                break;
+            readyGame = 0;
+        }
+        else
+        {
+            //draw a tile and set it to be the child of the current player's tile container
+            Debug.Log("Draw From Wall");
+            switch (CurrentPlayer)
+            {
+                case 1:
+                    TileContainer.transform.GetChild(0).gameObject.transform.SetParent(Player1Container.transform, false);
+                    freshdrawtile = Player1Container.transform.GetChild(Player1Container.transform.childCount - 1).gameObject.name;
+                    Player1Container.transform.GetChild(Player1Container.transform.childCount - 1).GetComponent<GameTileScript>().toggleTileFace();
+                    RearrangeCards(Player1Container);
+                    break;
+                case 2:
+                    TileContainer.transform.GetChild(0).gameObject.transform.SetParent(Player2Container.transform, false);
+                    freshdrawtile = Player2Container.transform.GetChild(Player2Container.transform.childCount - 1).gameObject.name;
+                    Player2Container.transform.GetChild(Player2Container.transform.childCount - 1).GetComponent<GameTileScript>().toggleTileFace();
+                    RearrangeCards(Player2Container);
+                    break;
+                case 3:
+                    TileContainer.transform.GetChild(0).gameObject.transform.SetParent(Player3Container.transform, false);
+                    freshdrawtile = Player3Container.transform.GetChild(Player3Container.transform.childCount - 1).gameObject.name;
+                    Player3Container.transform.GetChild(Player3Container.transform.childCount - 1).GetComponent<GameTileScript>().toggleTileFace();
+                    RearrangeCards(Player3Container);
+                    break;
+                case 4:
+                    TileContainer.transform.GetChild(0).gameObject.transform.SetParent(Player4Container.transform, false);
+                    freshdrawtile = Player4Container.transform.GetChild(Player4Container.transform.childCount - 1).gameObject.name;
+                    Player4Container.transform.GetChild(Player4Container.transform.childCount - 1).GetComponent<GameTileScript>().toggleTileFace();
+                    RearrangeCards(Player4Container);
+                    break;
+                default:
+                    Debug.Log("Invalid player number");
+                    break;
+            }
         }
 
     }
 
+    //draw tile from the back of the wall and set it to be the child of the current player's container (not the exposed container)
     void DrawCardFromBackWall()
     {
-        Debug.Log("Draw From Wall");
-        switch (CurrentPlayer)
+        //if there are less than 16 tiles in the unseen stack, end game.
+        if (TileContainer.transform.childCount < 16)
         {
-            case 1:
-                TileContainer.transform.GetChild(TileContainer.transform.childCount - 1).gameObject.transform.SetParent(Player1Container.transform, false);
-                freshdrawtile = Player1Container.transform.GetChild(Player1Container.transform.childCount - 1).gameObject.name;
-                Player1Container.transform.GetChild(Player1Container.transform.childCount - 1).GetComponent<GameTileScript>().toggleTileFace();
-                RearrangeCards(Player1Container);
-                break;
-            case 2:
-                TileContainer.transform.GetChild(TileContainer.transform.childCount - 1).gameObject.transform.SetParent(Player2Container.transform, false);
-                freshdrawtile = Player2Container.transform.GetChild(Player2Container.transform.childCount - 1).gameObject.name;
-                Player2Container.transform.GetChild(Player2Container.transform.childCount - 1).GetComponent<GameTileScript>().toggleTileFace();
-                RearrangeCards(Player2Container);
-                break;
-            case 3:
-                TileContainer.transform.GetChild(TileContainer.transform.childCount - 1).gameObject.transform.SetParent(Player3Container.transform, false);
-                freshdrawtile = Player3Container.transform.GetChild(Player3Container.transform.childCount - 1).gameObject.name;
-                Player3Container.transform.GetChild(Player3Container.transform.childCount - 1).GetComponent<GameTileScript>().toggleTileFace();
-                RearrangeCards(Player3Container);
-                break;
-            case 4:
-                TileContainer.transform.GetChild(TileContainer.transform.childCount - 1).gameObject.transform.SetParent(Player4Container.transform, false);
-                freshdrawtile = Player4Container.transform.GetChild(Player4Container.transform.childCount - 1).gameObject.name;
-                Player4Container.transform.GetChild(Player4Container.transform.childCount - 1).GetComponent<GameTileScript>().toggleTileFace();
-                RearrangeCards(Player4Container);
-                break;
-            default:
-                Debug.Log("Invalid player number");
-                break;
+            readyGame = 0;
         }
+        //else draw tile and set correct parent.
+        else {        
+            Debug.Log("Draw From Wall");
+            switch (CurrentPlayer)
+            {
+                case 1:
+                    TileContainer.transform.GetChild(TileContainer.transform.childCount - 1).gameObject.transform.SetParent(Player1Container.transform, false);
+                    freshdrawtile = Player1Container.transform.GetChild(Player1Container.transform.childCount - 1).gameObject.name;
+                    Player1Container.transform.GetChild(Player1Container.transform.childCount - 1).GetComponent<GameTileScript>().toggleTileFace();
+                    RearrangeCards(Player1Container);
+                    break;
+                case 2:
+                    TileContainer.transform.GetChild(TileContainer.transform.childCount - 1).gameObject.transform.SetParent(Player2Container.transform, false);
+                    freshdrawtile = Player2Container.transform.GetChild(Player2Container.transform.childCount - 1).gameObject.name;
+                    Player2Container.transform.GetChild(Player2Container.transform.childCount - 1).GetComponent<GameTileScript>().toggleTileFace();
+                    RearrangeCards(Player2Container);
+                    break;
+                case 3:
+                    TileContainer.transform.GetChild(TileContainer.transform.childCount - 1).gameObject.transform.SetParent(Player3Container.transform, false);
+                    freshdrawtile = Player3Container.transform.GetChild(Player3Container.transform.childCount - 1).gameObject.name;
+                    Player3Container.transform.GetChild(Player3Container.transform.childCount - 1).GetComponent<GameTileScript>().toggleTileFace();
+                    RearrangeCards(Player3Container);
+                    break;
+                case 4:
+                    TileContainer.transform.GetChild(TileContainer.transform.childCount - 1).gameObject.transform.SetParent(Player4Container.transform, false);
+                    freshdrawtile = Player4Container.transform.GetChild(Player4Container.transform.childCount - 1).gameObject.name;
+                    Player4Container.transform.GetChild(Player4Container.transform.childCount - 1).GetComponent<GameTileScript>().toggleTileFace();
+                    RearrangeCards(Player4Container);
+                    break;
+                default:
+                    Debug.Log("Invalid player number");
+                    break;
+            } 
+        }
+
 
     }
 
+    //displays chow option to the player that qualifies for the chow move. this functions receives the possible meld sets in the format earlier mentioned in game loop. (CHECK FOR CHOW)
     void DisplayChowOptions(int[][] meldsets)
     {
+        //instantiates the display and the option button(s). OptionButton0 shall always be the no thanks option.
         GameObject overlayPrefab = Instantiate(OverlayPanelPrefab, GameCanvas.transform);
         overlayPrefab.transform.Find("PlayerLabel").GetComponent<Text>().text = "PLAYER " + GetNextPlayer().ToString();
         GameObject nothanksButton = Instantiate(OptionsButtonPrefab, overlayPrefab.transform);
         nothanksButton.name = "OptionButton" + "0";
         nothanksButton.GetComponentInChildren<Text>().text = "No thanks";
 
+        //debugging purposes
         for (int i = 0; i < 3; i++)
         {
             if (meldsets[i] == null) { break; }
 
             Debug.Log(meldsets[i][0] + "-" + meldsets[i][1] + "-" + meldsets[i][2]);
         }
-        //spawn option buttons
+
+        //spawn option buttons in the meldsets[]
         for (int i = 0; i < 3; i++)
         {
+            //if there are no longer any possible meldset[], break out of loop and stop instantiating buttons
             if (meldsets[i] == null) { break; }
             else
             {
@@ -1091,18 +1133,24 @@ public class GameManagerScript : MonoBehaviour
         }
     }
 
+    //display the pong/gang move options to qualifying player when called
     void DisplayPongGangOptions(bool[] ponggangset) {
         GameObject overlayPrefab = Instantiate(OverlayPanelPrefab, GameCanvas.transform);
         overlayPrefab.transform.Find("PlayerLabel").GetComponent<Text>().text = "PLAYER " + pongplayer.ToString();
+
+        //instantiate no thanks button
         GameObject nothanksButton = Instantiate(OptionsButtonPrefab, overlayPrefab.transform);
         nothanksButton.name = "OptionButton" + "0";
         nothanksButton.GetComponentInChildren<Text>().text = "No thanks";
 
+        //instantiate the PONG option button if ponggangset[0] == true, which means player qualifies to PONG
         if (ponggangset[0] == true) {
             GameObject optionButton = Instantiate(OptionsButtonPrefab, overlayPrefab.transform);
             optionButton.name = "OptionButton" + "1";
             optionButton.GetComponentInChildren<Text>().text = "PONG";
         }
+
+        //instantiate the GANG option button if ponggangset[1] == true, which means player qualifies to PONG
         if (ponggangset[1] == true)
         {
             GameObject optionButton = Instantiate(OptionsButtonPrefab, overlayPrefab.transform);
@@ -1111,18 +1159,23 @@ public class GameManagerScript : MonoBehaviour
         }
     }
 
+    //display gang option to the current player (if he qualifies) if player draws a tile that qualifies player to perform gang move
     void DisplayPlayerGangOptions() {
         GameObject overlayPrefab = Instantiate(OverlayPanelPrefab, GameCanvas.transform);
         overlayPrefab.transform.Find("PlayerLabel").GetComponent<Text>().text = "PLAYER " + CurrentPlayer.ToString();
+
+        //instantiate no thanks button
         GameObject nothanksButton = Instantiate(OptionsButtonPrefab, overlayPrefab.transform);
         nothanksButton.name = "OptionButton" + "0";
         nothanksButton.GetComponentInChildren<Text>().text = "No thanks";
 
+        //instantiate gang option
         GameObject optionButton = Instantiate(OptionsButtonPrefab, overlayPrefab.transform);
         optionButton.name = "OptionButton" + "1";
         optionButton.GetComponentInChildren<Text>().text = "GANG";
     }
 
+    //destroys option display and the buttons
     void DestroyOptionButtons()
     {
         //for (int i = 0; i < 3; i++)
@@ -1147,20 +1200,20 @@ public class GameManagerScript : MonoBehaviour
         }
     }
 
+    //checks for chow and returns the meldsets[][] format mentioned previously in game loop
     int[][] CheckForChow()
     {
+        //retrieve the freshly discarded tile index
         int discardTile = GetDiscardTile();
         int[] playerHand = new int[34];
+        //get playershand in correct format as mentioned
         playerHand = ComputeHand(GetNextPlayer());
         int meldsetindex = 0;
-        //int[][] possiblemeldsets = new int[][] {
-        //     new int[3],
-        //     new int[3],
-        //     new int[3]
-        // };
+
         int[][] possiblemeldsets = new int[3][];
         Debug.Log("CHECK FOR CHOW ENTERED");
 
+        //check for cards that are only in the bamboo suit, dot suit and character suit
         if (discardTile < 27)
         {
             //add discard tile to hand temporarily
@@ -1174,6 +1227,7 @@ public class GameManagerScript : MonoBehaviour
 
             Debug.Log("Suit of Discard: " + (suit));
 
+            //CHECKING POSSIBLE MELDS
             if (discardTile % 9 == 0) //This is only for shift pattern 1,2,3. Ignore i value
             {
                 //for (int i = 0 + 9 * suit; i < 1 + 9 * suit; i++)
@@ -1246,8 +1300,6 @@ public class GameManagerScript : MonoBehaviour
             }
             else if (discardTile % 9 == 8)
             {
-                //for (int i = 6 + 9 * suit; i < 7 + 9 * suit; i++)
-                //{
                 int i = 6 + 9 * suit;
                 countShift = 0;
                 alrChecked = false;
@@ -1266,7 +1318,6 @@ public class GameManagerScript : MonoBehaviour
                         meldsetindex++;
                     }
                 }
-                //}
             }
             else if (discardTile % 9 > 1 && discardTile % 9 < 7)
             {
@@ -1291,7 +1342,9 @@ public class GameManagerScript : MonoBehaviour
                     }
                 }
             }
+            //END OF CHECKING POSSIBLE MELDS
 
+            //if there are no possible meld sets
             if (possiblemeldsets[0] == null)
             {
 
@@ -1308,15 +1361,20 @@ public class GameManagerScript : MonoBehaviour
                     Debug.Log(" FINAL Meld Set " + i + " :" + possiblemeldsets[i][0] + "-" + possiblemeldsets[i][1] + "-" + possiblemeldsets[i][2]);
                 }
             }
-            //end of debugging            
+            //end of debugging
+            
+
             return possiblemeldsets;
 
         }
 
+        //if tile does not belong to the bamboo, dot or character suits, return null as chow is not possible.
         return null;
 
     }
 
+
+    //check if player is able to perform gang move with tiles in players hand (exposed or not) (not any discarded tile)
     bool CheckForPlayerGang()
     {
         Debug.Log("CHECKING FOR PLAYER: " + CurrentPlayer);
@@ -1324,15 +1382,19 @@ public class GameManagerScript : MonoBehaviour
         playerHand = ComputeHand(CurrentPlayer);
         //Debug.Log("PLAYER" + CurrentPlayer + " HAND" + string.Join(",", playerHand));
 
+        //if any tile in players hand has 4 of the same kind (same index)
         for (int i = 0; i < 34; i++) {
             if (playerHand[i] == 4)
             {
+                //set gangplayer as currentplayer
                 gangplayer = CurrentPlayer;
+                //isInExposed is an indicator to show if the other 3 tiles are in player's exposed or concealed container
                 isInExposed = false;
                 return true;
             }
         }
 
+        //check for 3 of the same kind (same index) as drawn tile in player's exposed container
         GameObject PlayerExposedContainer;
         switch (CurrentPlayer)
         {
@@ -1373,30 +1435,39 @@ public class GameManagerScript : MonoBehaviour
             }
         }
 
-
+        //else return false
         return false;
     }
 
+    //check for qualifying pong/gang moves
     bool[] CheckForPongGang() {
+
+        //same as ponggangset[] previously mentioned in game loop
         bool[] ponggang = new bool[2];
         ponggang[0] = false;
         ponggang[1] = false;
+
+        //check through all players - only possible for 1 player to perform pong/gang move if any.
         for (int i = 1; i < 5; i++)
         {
+            //if current player, skip
             if (CurrentPlayer != i)
             {
                 Debug.Log("CHECKING FOR PLAYER: " + i);
                 int discardIndex = GetDiscardTile();
                 Debug.Log("DISCARD TILE CHECKING: " + discardIndex);
                 int[] playerHand = new int[34];
+                //compute hand according to format previously mentioned
                 playerHand = ComputeHand(i);
                 //Debug.Log("PLAYER" + i + " HAND" + playerHand);
                 Debug.Log("PLAYER" + i + " HAND" + string.Join(",", playerHand));
 
+                //if there are 2 counts of the discarded tile index in the player's hand (not exposed), pong move qualifies
                 if (playerHand[discardIndex] > 1)
                 {
                     ponggang[0] = true;
                     pongplayer = i;
+                    //if there are 3 counts, gang move qualifies
                     if (playerHand[discardIndex] == 3)
                     {
                         ponggang[1] = true;
@@ -1411,12 +1482,340 @@ public class GameManagerScript : MonoBehaviour
         return ponggang;
     }
 
+    //this functions checks the players concealed hand with 4 methods and returns the one that gives it the best results
+    public int[] checkTileSet(int[] handSet)
+    {
+        int[] sCount = shiftFirstCheck(handSet);
+        int[] mCount = meldFirstCheck(handSet);
+        int[] sbCount = shiftFirstCheckBackwards(handSet);
+        int[] mbCount = meldFirstCheckBackwards(handSet);
+        Debug.Log("meldFirst Count: " + mCount[0] + " meldFirst Eye: " + mCount[1]);
+        Debug.Log("shiftFirst Count: " + sCount[0] + " shiftFirst Eye: " + sCount[1]);
+        Debug.Log("shiftbFirst Count: " + sbCount[0] + " shiftbFirst Eye: " + sbCount[1]);
+        Debug.Log("meldbFirst Count: " + mbCount[0] + " meldbFirst Eye: " + mbCount[1]);
+
+        int[][] allCount = new int[4][];
+        allCount[0] = sCount;
+        allCount[1] = mCount;
+        allCount[2] = sbCount;
+        allCount[3] = mbCount;
+
+        //check for eye
+        for (int i = 0; i < 4; i++)
+        {
+            Debug.Log("EYE COUNT FOR Count Set " + i + "in checkTileSet is" + allCount[i][1]);
+            if (allCount[i][1] != 1)
+            {
+                allCount[i] = new int[] { 0, 0 };
+                Debug.Log("Count Set " + i + "in checkTileSet is OUT");
+            }
+        }
+
+        //check for set count
+        int[] highestCount = allCount[0];
+        for (int i = 1; i < 4; i++)
+        {
+            if (allCount[i][0] > highestCount[0])
+            {
+                highestCount = allCount[i];
+            }
+        }
+        return highestCount;
+    }
+
+
+    //method 1
+    int[] meldFirstCheck(int[] playerHand)
+    {
+        int[] tempHand = new int[34];
+        Array.Copy(playerHand, tempHand, 34);
+        int[] totalCount = new int[2] { 0, 0 };
+
+        for (int i = 0; i < 34; i++) //Check for pong
+        {
+            if (tempHand[i] == 3)
+            {
+                tempHand[i] -= 3;
+                totalCount[0] += 1;
+            }
+        }
+        for (int x = 0; x < 3; x++) //To keep track of the 3 suits and check for shifts
+        {
+            for (int i = 0 + 9 * x; i < 7 + 9 * x; i++) //only need to check for wan tong suo
+            {
+                int countShift = 0;
+                for (int j = i; j < i + 3; j++)
+                {
+                    if (tempHand[j] > 0)
+                    {
+                        countShift++;
+                        if (countShift == 3)
+                        {
+                            for (int k = 0; k < 3; k++)
+                            {
+                                tempHand[i + k] -= 1;
+                            }
+                            i = -1;
+                            totalCount[0] += 1;
+                        }
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+            }
+        }
+
+        for (int i = 0; i < 34; i++) //Check for eye
+        {
+            if (tempHand[i] == 2)
+            {
+                tempHand[i] -= 2;
+                totalCount[1] += 1;
+            }
+        }
+
+        return totalCount;
+    }
+
+    //method 2
+    int[] meldFirstCheckBackwards(int[] playerHand)
+    {
+        int[] tempHand = new int[34];
+        Array.Copy(playerHand, tempHand, 34);
+        int[] totalCount = new int[2] { 0, 0 };
+
+        for (int i = 0; i < 34; i++) //Check for pong
+        {
+            if (tempHand[i] == 3)
+            {
+                tempHand[i] -= 3;
+                totalCount[0] += 1;
+            }
+        }
+        for (int x = 0; x < 3; x++) //To keep track of the 3 suits and check for shifts
+        {
+            for (int i = 8 + 9 * x; i > 1 + (9 * x); i--) //check chow - only need to check for wan tong suo
+            {
+                int countShift = 0;
+                for (int j = i; j > i - 3; j--)
+                {
+                    if (tempHand[j] > 0)
+                    {
+                        countShift++;
+                        if (countShift == 3)
+                        {
+                            for (int k = 2; k > -1; k--)
+                            {
+                                tempHand[i - k] -= 1;
+                            }
+                            i += 1;
+                            totalCount[0] += 1;
+                        }
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+            }
+        }
+
+        for (int i = 0; i < 34; i++) //Check for eye
+        {
+            if (tempHand[i] == 2)
+            {
+                tempHand[i] -= 2;
+                totalCount[1] += 1;
+            }
+        }
+
+        return totalCount;
+    }
+
+    //method 3
+    int[] shiftFirstCheck(int[] playerHand)
+    {
+        int[] tempHand = new int[34];
+        Array.Copy(playerHand, tempHand, 34);
+        //temp hand shall be remaining tiles in the player's container (not exposed)
+        int[] totalCount = new int[2] { 0, 0 };
+
+        for (int x = 0; x < 3; x++) //To keep track of the 3 suits and check for shifts
+        {
+            for (int i = 0 + 9 * x; i < 7 + 9 * x; i++) //only need to check for wan tong suo
+            {
+                int countShift = 0;
+                for (int j = i; j < i + 3; j++)
+                {
+                    if (tempHand[j] > 0)
+                    {
+                        countShift++;
+                        if (countShift == 3)
+                        {
+                            for (int k = 0; k < 3; k++)
+                            {
+                                tempHand[i + k] -= 1;
+                            }
+                            i = -1;
+                            totalCount[0] += 1;
+                        }
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+            }
+        }
+        for (int i = 0; i < 34; i++) //Check for pong
+        {
+            if (tempHand[i] == 3)
+            {
+                tempHand[i] -= 3;
+                totalCount[0] += 1;
+            }
+        }
+        for (int i = 0; i < 34; i++) //Check for eye
+        {
+            if (tempHand[i] == 2)
+            {
+                tempHand[i] -= 2;
+                totalCount[1] += 1;
+            }
+        }
+        return totalCount;
+    }
+
+    //method 4
+    int[] shiftFirstCheckBackwards(int[] playerHand)
+    {
+        int[] tempHand = new int[34];
+        Array.Copy(playerHand, tempHand, 34);
+        //temp hand shall be remaining tiles in the player's container (not exposed)
+        int[] totalCount = new int[2] { 0, 0 };
+
+        for (int x = 0; x < 3; x++) //To keep track of the 3 suits and check for shifts
+        {
+            for (int i = 8 + 9 * x; i > 1 + (9 * x); i--) //check chow - only need to check for wan tong suo
+            {
+                int countShift = 0;
+                for (int j = i; j > i - 3; j--)
+                {
+                    if (tempHand[j] > 0)
+                    {
+                        countShift++;
+                        if (countShift == 3)
+                        {
+                            for (int k = 2; k > -1; k--)
+                            {
+                                tempHand[i - k] -= 1;
+                            }
+                            i += 1;
+                            totalCount[0] += 1;
+                        }
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+            }
+        }
+        for (int i = 0; i < 34; i++) //Check for pong
+        {
+            if (tempHand[i] == 3)
+            {
+                tempHand[i] -= 3;
+                totalCount[0] += 1;
+            }
+        }
+        for (int i = 0; i < 34; i++) //Check for eye
+        {
+            if (tempHand[i] == 2)
+            {
+                tempHand[i] -= 2;
+                totalCount[1] += 1;
+            }
+        }
+        return totalCount;
+    }
+
+    //checks if player is able to win
+    bool CheckForHu(int[] playerHand)
+    {
+        int[] tempHand = new int[34];
+        Array.Copy(playerHand, tempHand, 34);
+        Debug.Log("CheckForHu tempHand = " + string.Join(", ", tempHand));
+        int[] tempCount = checkTileSet(tempHand);
+        int concealedtiles = GetConcealedTiles(tempHand);
+        Debug.Log("concealed tiles count = " + concealedtiles);
+        int requiredmelds = 0;
+        
+        switch (concealedtiles)
+        {
+            //if there are 14 remaining tiles in player's concealed hand, there needs to be 4 melds and 1 eye
+            case 14:
+                requiredmelds = 4;
+                break;
+            //if there are 11 remaining tiles in player's concealed hand, there needs to be 3 melds and 1 eye
+            case 11:
+                requiredmelds = 3;
+                break;
+            //if there are 8 remaining tiles in player's concealed hand, there needs to be 2 melds and 1 eye
+            case 8:
+                requiredmelds = 2;
+                break;
+            //if there are 5 remaining tiles in player's concealed hand, there needs to be 1 melds and 1 eye
+            case 5:
+                requiredmelds = 1;
+                break;
+            //if there are 2 remaining tiles in player's concealed hand, there needs to be 0 melds and 1 eye
+            case 2:
+                requiredmelds = 0;
+                break;
+            default:
+                requiredmelds = 99;
+                break;
+        }
+        Debug.Log("CHECK FOR HU ENTERED, CURRENT REQUIRED MELDS: " + requiredmelds);
+        Debug.Log("CURRENT EYE COUNT: " + tempCount[1]);
+        if (tempCount[0] == requiredmelds && tempCount[1] == 1)
+        {
+            //PLAYER CAN WIN
+            Debug.Log("CAN HU");
+            return true;
+        }
+        else
+        {
+            //PLAYER CANNOT WIN
+            Debug.Log("CANNOT HU");
+            return false;
+        }
+    }
+
+    //retrieves number of concealed tiles in player's hand, this is for check for hu (check for win)
+    int GetConcealedTiles(int[] playerHand)
+    {
+        Debug.Log("GetConcealedTiles received: " + string.Join(", ", playerHand));
+        int totaltiles = 0;
+        for (int i = 0; i < 34; i++)
+        {
+            totaltiles = totaltiles + playerHand[i];
+        }
+        Debug.Log("TOTAL CONCEALED TILES: " + totaltiles);
+        return totaltiles;
+    }
+
+    //asign next player to be pong player who just executed pong move
     void AssignNextPlayer() {
         CurrentPlayer = pongplayer;
         Debug.Log("PLAYER: " + CurrentPlayer);
         turncount++;
     }
 
+    //execute qualifying chow move's tiles to respective containers (qualifying player exposed container and create meld set container)
     void ExecuteChow(int[][] meldsets)
     {
         int discardIndex = GetDiscardTile();
@@ -1498,6 +1897,8 @@ public class GameManagerScript : MonoBehaviour
         Debug.Log("CHOSEN MELD: " + chosenmeld[0] + "-" + chosenmeld[1] + "-" + chosenmeld[2]);
     }
 
+    //execute qualifying gang move's tiles to respective containers (qualifying player exposed container and create meld set container)
+    //qualifying player also becomes the next player in turn
     void ExecutePlayerGang() {
         int gangtile = -99;
         string gangtilename;
@@ -1564,6 +1965,8 @@ public class GameManagerScript : MonoBehaviour
         DrawCardFromBackWall();
     }
 
+    //execute qualifying pong/gang move's tiles to respective containers (qualifying player exposed container and create meld set container)
+    //qualifying player also becomes the next player in turn
     void ExecutePongGang() {
         int discardIndex = GetDiscardTile();
         int times;
