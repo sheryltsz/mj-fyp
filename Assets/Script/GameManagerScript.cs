@@ -54,6 +54,9 @@ public class GameManagerScript : MonoBehaviour
     public GameObject DiscardContainer;
     public GameObject OverlayPanelPrefab;
     public GameObject OptionsButtonPrefab;
+    public GameObject ChowOptionButtonPrefab;
+    public GameObject PongOptionButtonPrefab;
+    public GameObject GangOptionButtonPrefab;
     public GameObject MeldSetContainerPrefab;
     public GameObject GameOverPanelPrefab;
     public GameObject CurrentWindText;
@@ -143,58 +146,9 @@ public class GameManagerScript : MonoBehaviour
                 //set to false immediately as the next player has started his turn
                 endofturn = false;
                 Debug.Log("TURNCOUNT: " + turncount);
-
-                if (turncount == 1) {
-                    //check for straight win
-                    if (CheckForHu(ComputeHand(CurrentPlayer)))
-                    {
-                        winnerfound = CurrentPlayer;
-                        break;
-                    }
-
-                    //check for CURRENT player is able to perform gang move and if player wants to
-                    if (CheckForPlayerGang())
-                    {
-                        DisplayPlayerGangOptions();
-                        responded = false;
-                        Debug.Log("Enter WaitForResponse-PLAYERGANG");
-
-                        //wait for player response for 5 seconds - responded will be accessed from OptionButtonScript if player responses
-                        for (int i = 0; i < 5; i++)
-                        {
-                            yield return new WaitForSeconds(1);
-                            if (responded == true)
-                            {
-                                break;
-                            }
-                        }
-                        //END OF WAIT FOR PONG GANG RESPONSE
-                        if (responded == true)
-                        {
-                            Debug.Log("WaitForResponse OPTION BUTTON - RESPONDED " + btnSelected);
-                            responded = false;
-
-                            //check if player selected an option other than "No Thanks"
-                            if (btnSelected != 0)
-                            {
-                                //perform player gang move
-                                ExecutePlayerGang();
-                            }
-                        }
-                        else
-                        {
-                            Debug.Log("WaitForResponse No response but 5 seconds up");
-                        }
-
-
-                        //remove options display from screen
-                        DestroyOptionButtons();
-                        Debug.Log("WaitForResponse Completed");
-                    }
-                }
                 //check that this is not the first round (as the first player would have already drawn an extra tile the first round - do not need to draw a new tile) 
                 //playergang == true means that a player has just performed gang move and can now draw a tile from the back wall
-                else if (turncount != 1 && playergang == true)
+                if (turncount != 1 && playergang == true)
                 {
                     playergang = false;
                     playerponggang = false;
@@ -1304,17 +1258,42 @@ public class GameManagerScript : MonoBehaviour
         }
 
         //spawn option buttons in the meldsets[]
+        //for (int i = 0; i < 3; i++)
+        //{
+        //    //if there are no longer any possible meldset[], break out of loop and stop instantiating buttons
+        //    if (meldsets[i] == null) { break; }
+        //    else
+        //    {
+        //        GameObject optionButton = Instantiate(OptionsButtonPrefab, overlayPrefab.transform);
+        //        int temp = i + 1;
+        //        optionButton.name = "OptionButton" + temp.ToString();
+        //        optionButton.GetComponentInChildren<Text>().text = meldsets[i][0] + "-" + meldsets[i][1] + "-" + meldsets[i][2];
+        //    }
+        //}
+
         for (int i = 0; i < 3; i++)
         {
             //if there are no longer any possible meldset[], break out of loop and stop instantiating buttons
             if (meldsets[i] == null) { break; }
             else
             {
-                GameObject optionButton = Instantiate(OptionsButtonPrefab, overlayPrefab.transform);
+                GameObject optionButton = Instantiate(ChowOptionButtonPrefab, overlayPrefab.transform);
                 int temp = i + 1;
                 optionButton.name = "OptionButton" + temp.ToString();
-                optionButton.GetComponentInChildren<Text>().text = meldsets[i][0] + "-" + meldsets[i][1] + "-" + meldsets[i][2];
+                optionButton.gameObject.transform.Find("TileImage0").GetComponent<RawImage>().texture = Resources.Load<Texture2D>("Images/" + tileIndexToString(meldsets[i][0]));
+                optionButton.gameObject.transform.Find("TileImage1").GetComponent<RawImage>().texture = Resources.Load<Texture2D>("Images/" + tileIndexToString(meldsets[i][1]));
+                optionButton.gameObject.transform.Find("TileImage2").GetComponent<RawImage>().texture = Resources.Load<Texture2D>("Images/" + tileIndexToString(meldsets[i][2]));
             }
+        }
+    }
+
+    string tileIndexToString(int tileindexint) {
+        if (tileindexint < 10)
+        {
+            return "0" + tileindexint.ToString();
+        }
+        else {
+            return tileindexint.ToString();
         }
     }
 
@@ -1329,18 +1308,27 @@ public class GameManagerScript : MonoBehaviour
         nothanksButton.GetComponentInChildren<Text>().text = "No thanks";
 
         //instantiate the PONG option button if ponggangset[0] == true, which means player qualifies to PONG
-        if (ponggangset[0] == true) {
-            GameObject optionButton = Instantiate(OptionsButtonPrefab, overlayPrefab.transform);
+        //if (ponggangset[0] == true) {
+        //    GameObject optionButton = Instantiate(OptionsButtonPrefab, overlayPrefab.transform);
+        //    optionButton.name = "OptionButton" + "1";
+        //    optionButton.GetComponentInChildren<Text>().text = "PONG";
+        //}
+
+        if (ponggangset[0] == true)
+        {
+            GameObject optionButton = Instantiate(PongOptionButtonPrefab, overlayPrefab.transform);
             optionButton.name = "OptionButton" + "1";
-            optionButton.GetComponentInChildren<Text>().text = "PONG";
+            string pongtilename = DiscardContainer.transform.GetChild(DiscardContainer.transform.childCount - 1).gameObject.name;
+            optionButton.GetComponentInChildren<RawImage>().texture = Resources.Load<Texture2D>("Images/" + pongtilename);
         }
 
         //instantiate the GANG option button if ponggangset[1] == true, which means player qualifies to PONG
         if (ponggangset[1] == true)
         {
-            GameObject optionButton = Instantiate(OptionsButtonPrefab, overlayPrefab.transform);
+            GameObject optionButton = Instantiate(GangOptionButtonPrefab, overlayPrefab.transform);
             optionButton.name = "OptionButton" + "2";
-            optionButton.GetComponentInChildren<Text>().text = "GANG";
+            string pongtilename = DiscardContainer.transform.GetChild(DiscardContainer.transform.childCount - 1).gameObject.name;
+            optionButton.GetComponentInChildren<RawImage>().texture = Resources.Load<Texture2D>("Images/" + pongtilename);
         }
     }
 
@@ -1355,9 +1343,9 @@ public class GameManagerScript : MonoBehaviour
         nothanksButton.GetComponentInChildren<Text>().text = "No thanks";
 
         //instantiate gang option
-        GameObject optionButton = Instantiate(OptionsButtonPrefab, overlayPrefab.transform);
+        GameObject optionButton = Instantiate(GangOptionButtonPrefab, overlayPrefab.transform); 
         optionButton.name = "OptionButton" + "1";
-        optionButton.GetComponentInChildren<Text>().text = "GANG";
+        optionButton.GetComponentInChildren<RawImage>().texture = Resources.Load<Texture2D>("Images/" + freshdrawtile);
     }
 
     //destroys option display and the buttons

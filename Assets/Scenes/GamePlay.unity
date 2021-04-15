@@ -1694,6 +1694,12 @@ MonoBehaviour:
     type: 3}
   OptionsButtonPrefab: {fileID: 1708063109137372164, guid: 22ad7878f7b23fa4db258516d7d1c95f,
     type: 3}
+  ChowOptionButtonPrefab: {fileID: 6958080609729110061, guid: 6be184a7ef09c804aa0681307d039762,
+    type: 3}
+  PongOptionButtonPrefab: {fileID: 6960075871116092607, guid: 4f7431be179beb543a3d3caed98162db,
+    type: 3}
+  GangOptionButtonPrefab: {fileID: 6811566146983102217, guid: 59acb961378f69f4f82dc94723d44253,
+    type: 3}
   MeldSetContainerPrefab: {fileID: 5109330651505582512, guid: 16c39ced7ffd20149b1b0eaf4f9bbcd7,
     type: 3}
   GameOverPanelPrefab: {fileID: 1496898260950860988, guid: 3aaed8604fcdca044800a2cf2a2c18a8,
