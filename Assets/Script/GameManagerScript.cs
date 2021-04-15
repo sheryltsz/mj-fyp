@@ -65,6 +65,15 @@ public class GameManagerScript : MonoBehaviour
     int gangplayer = -99; //record gangplayer if the player has just performed gang (will be next player)
     bool playergang = false; //indicator if a player has just performed gang
 
+    public bool p1TileFace = false;
+    bool p1_TileFace = false;
+    public bool p2TileFace = false;
+    bool p2_TileFace = false;
+    public bool p3TileFace = false;
+    bool p3_TileFace = false;
+    public bool p4TileFace = false;
+    bool p4_TileFace = false;
+
     // Start is called before the first frame update
     void Start()
     {
@@ -81,6 +90,41 @@ public class GameManagerScript : MonoBehaviour
             StartCoroutine(GameLoop()); //start gameloop
         }
 
+        if (p1TileFace != p1_TileFace) 
+        {
+            p1_TileFace = p1TileFace;
+            for (int i = 0; i < Player1Container.transform.childCount; i++)
+            {
+                Player1Container.transform.GetChild(i).GetComponent<GameTileScript>().toggleTileFace();
+            }
+        }
+
+        if (p2TileFace != p2_TileFace)
+        {
+            p2_TileFace = p2TileFace;
+            for (int i = 0; i < Player2Container.transform.childCount; i++)
+            {
+                Player2Container.transform.GetChild(i).GetComponent<GameTileScript>().toggleTileFace();
+            }
+        }
+
+        if (p3TileFace != p3_TileFace)
+        {
+            p3_TileFace = p3TileFace;
+            for (int i = 0; i < Player3Container.transform.childCount; i++)
+            {
+                Player3Container.transform.GetChild(i).GetComponent<GameTileScript>().toggleTileFace();
+            }
+        }
+
+        if (p4TileFace != p4_TileFace)
+        {
+            p4_TileFace = p4TileFace;
+            for (int i = 0; i < Player4Container.transform.childCount; i++)
+            {
+                Player4Container.transform.GetChild(i).GetComponent<GameTileScript>().toggleTileFace();
+            }
+        }
     }
 
     //MAIN GAME LOOP HERE
@@ -100,23 +144,72 @@ public class GameManagerScript : MonoBehaviour
                 endofturn = false;
                 Debug.Log("TURNCOUNT: " + turncount);
 
+                if (turncount == 1) {
+                    //check for straight win
+                    if (CheckForHu(ComputeHand(CurrentPlayer)))
+                    {
+                        winnerfound = CurrentPlayer;
+                        break;
+                    }
+
+                    //check for CURRENT player is able to perform gang move and if player wants to
+                    if (CheckForPlayerGang())
+                    {
+                        DisplayPlayerGangOptions();
+                        responded = false;
+                        Debug.Log("Enter WaitForResponse-PLAYERGANG");
+
+                        //wait for player response for 5 seconds - responded will be accessed from OptionButtonScript if player responses
+                        for (int i = 0; i < 5; i++)
+                        {
+                            yield return new WaitForSeconds(1);
+                            if (responded == true)
+                            {
+                                break;
+                            }
+                        }
+                        //END OF WAIT FOR PONG GANG RESPONSE
+                        if (responded == true)
+                        {
+                            Debug.Log("WaitForResponse OPTION BUTTON - RESPONDED " + btnSelected);
+                            responded = false;
+
+                            //check if player selected an option other than "No Thanks"
+                            if (btnSelected != 0)
+                            {
+                                //perform player gang move
+                                ExecutePlayerGang();
+                            }
+                        }
+                        else
+                        {
+                            Debug.Log("WaitForResponse No response but 5 seconds up");
+                        }
+
+
+                        //remove options display from screen
+                        DestroyOptionButtons();
+                        Debug.Log("WaitForResponse Completed");
+                    }
+                }
                 //check that this is not the first round (as the first player would have already drawn an extra tile the first round - do not need to draw a new tile) 
                 //playergang == true means that a player has just performed gang move and can now draw a tile from the back wall
-                if (turncount != 1 && playergang == true)
+                else if (turncount != 1 && playergang == true)
                 {
                     playergang = false;
                     playerponggang = false;
                     DrawCardFromBackWall();
-                    
+
                     //if player wins
                     if (CheckForHu(ComputeHand(CurrentPlayer)))
                     {
                         winnerfound = CurrentPlayer;
                         break;
-                    }                    
-                    
+                    }
+
                     //if not enough tiles in wall anymore
-                    if (readyGame == 0) {
+                    if (readyGame == 0)
+                    {
                         break;
                     }
 
@@ -157,7 +250,7 @@ public class GameManagerScript : MonoBehaviour
                         {
                             Debug.Log("WaitForResponse No response but 5 seconds up");
                         }
-                        
+
                         //remove options interface and continue game
                         DestroyOptionButtons();
                         Debug.Log("WaitForResponse Completed");
@@ -214,7 +307,7 @@ public class GameManagerScript : MonoBehaviour
                         {
                             Debug.Log("WaitForResponse No response but 5 seconds up");
                         }
-                        
+
 
                         //remove options display from screen
                         DestroyOptionButtons();
@@ -605,6 +698,45 @@ public class GameManagerScript : MonoBehaviour
         btnSelected = -99;
         tiletodiscard = "";
         startGame = false;
+        if (p1TileFace != false)
+        {
+            p1_TileFace = false;
+            p1TileFace = false;
+            for (int i = 0; i < Player1Container.transform.childCount; i++)
+            {
+                Player1Container.transform.GetChild(i).GetComponent<GameTileScript>().toggleTileFace();
+            }
+        }
+
+        if (p2TileFace != false)
+        {
+            p2_TileFace = false;
+            p2TileFace = false;
+            for (int i = 0; i < Player2Container.transform.childCount; i++)
+            {
+                Player2Container.transform.GetChild(i).GetComponent<GameTileScript>().toggleTileFace();
+            }
+        }
+
+        if (p3TileFace != false)
+        {
+            p3_TileFace = false;
+            p3TileFace = false;
+            for (int i = 0; i < Player3Container.transform.childCount; i++)
+            {
+                Player3Container.transform.GetChild(i).GetComponent<GameTileScript>().toggleTileFace();
+            }
+        }
+
+        if (p4TileFace != false)
+        {
+            p4_TileFace = false;
+            p4TileFace = false;
+            for (int i = 0; i < Player4Container.transform.childCount; i++)
+            {
+                Player4Container.transform.GetChild(i).GetComponent<GameTileScript>().toggleTileFace();
+            }
+        }
 
         //shift all the tiles back to the unseen tile container, be it in the discarded tile container, players container or players exposed containers. and set them back to facing down
         foreach (GameObject tile in tileSetGameObject) {
@@ -829,15 +961,30 @@ public class GameManagerScript : MonoBehaviour
         {
             case 1:
                 playerContainer = Player1Container;
+                if (p1_TileFace == true) {
+                    playerContainer.gameObject.transform.Find(tiletodiscard).gameObject.GetComponent<GameTileScript>().toggleTileFace();
+                }
                 break;
             case 2:
                 playerContainer = Player2Container;
+                if (p2_TileFace == true)
+                {
+                    playerContainer.gameObject.transform.Find(tiletodiscard).gameObject.GetComponent<GameTileScript>().toggleTileFace();
+                }
                 break;
             case 3:
                 playerContainer = Player3Container;
+                if (p3_TileFace == true)
+                {
+                    playerContainer.gameObject.transform.Find(tiletodiscard).gameObject.GetComponent<GameTileScript>().toggleTileFace();
+                }
                 break;
             case 4:
                 playerContainer = Player4Container;
+                if (p4_TileFace == true)
+                {
+                    playerContainer.gameObject.transform.Find(tiletodiscard).gameObject.GetComponent<GameTileScript>().toggleTileFace();
+                }
                 break;
             default:
                 Debug.Log("Invalid player number");
@@ -991,15 +1138,31 @@ public class GameManagerScript : MonoBehaviour
         switch (CurrentPlayer)
         {
             case 1:
+                if (p1_TileFace == true)
+                {
+                    Player1Container.transform.GetChild(Player1Container.transform.childCount - 1).gameObject.GetComponent<GameTileScript>().toggleTileFace();
+                }
                 Player1Container.transform.GetChild(Player1Container.transform.childCount - 1).gameObject.transform.SetParent(DiscardContainer.transform);
                 break;
             case 2:
+                if (p2_TileFace == true)
+                {
+                    Player2Container.transform.GetChild(Player2Container.transform.childCount - 1).gameObject.GetComponent<GameTileScript>().toggleTileFace();
+                }
                 Player2Container.transform.GetChild(Player2Container.transform.childCount - 1).gameObject.transform.SetParent(DiscardContainer.transform);
                 break;
             case 3:
+                if (p3_TileFace == true)
+                {
+                    Player3Container.transform.GetChild(Player3Container.transform.childCount - 1).gameObject.GetComponent<GameTileScript>().toggleTileFace();
+                }
                 Player3Container.transform.GetChild(Player3Container.transform.childCount - 1).gameObject.transform.SetParent(DiscardContainer.transform);
                 break;
             case 4:
+                if (p4_TileFace == true)
+                {
+                    Player4Container.transform.GetChild(Player4Container.transform.childCount - 1).gameObject.GetComponent<GameTileScript>().toggleTileFace();
+                }
                 Player4Container.transform.GetChild(Player4Container.transform.childCount - 1).gameObject.transform.SetParent(DiscardContainer.transform);
                 break;
             default:
@@ -1025,25 +1188,36 @@ public class GameManagerScript : MonoBehaviour
                 case 1:
                     TileContainer.transform.GetChild(0).gameObject.transform.SetParent(Player1Container.transform, false);
                     freshdrawtile = Player1Container.transform.GetChild(Player1Container.transform.childCount - 1).gameObject.name;
-                    Player1Container.transform.GetChild(Player1Container.transform.childCount - 1).GetComponent<GameTileScript>().toggleTileFace();
+                    if (p1_TileFace == false) { 
+                        Player1Container.transform.GetChild(Player1Container.transform.childCount - 1).GetComponent<GameTileScript>().toggleTileFace();
+                    }
                     RearrangeCards(Player1Container);
                     break;
                 case 2:
                     TileContainer.transform.GetChild(0).gameObject.transform.SetParent(Player2Container.transform, false);
                     freshdrawtile = Player2Container.transform.GetChild(Player2Container.transform.childCount - 1).gameObject.name;
-                    Player2Container.transform.GetChild(Player2Container.transform.childCount - 1).GetComponent<GameTileScript>().toggleTileFace();
+                    if (p2_TileFace == false)
+                    {
+                        Player2Container.transform.GetChild(Player2Container.transform.childCount - 1).GetComponent<GameTileScript>().toggleTileFace();
+                    }
                     RearrangeCards(Player2Container);
                     break;
                 case 3:
                     TileContainer.transform.GetChild(0).gameObject.transform.SetParent(Player3Container.transform, false);
                     freshdrawtile = Player3Container.transform.GetChild(Player3Container.transform.childCount - 1).gameObject.name;
-                    Player3Container.transform.GetChild(Player3Container.transform.childCount - 1).GetComponent<GameTileScript>().toggleTileFace();
+                    if (p3_TileFace == false)
+                    {
+                        Player3Container.transform.GetChild(Player3Container.transform.childCount - 1).GetComponent<GameTileScript>().toggleTileFace();
+                    }
                     RearrangeCards(Player3Container);
                     break;
                 case 4:
                     TileContainer.transform.GetChild(0).gameObject.transform.SetParent(Player4Container.transform, false);
                     freshdrawtile = Player4Container.transform.GetChild(Player4Container.transform.childCount - 1).gameObject.name;
-                    Player4Container.transform.GetChild(Player4Container.transform.childCount - 1).GetComponent<GameTileScript>().toggleTileFace();
+                    if (p4_TileFace == false)
+                    {
+                        Player4Container.transform.GetChild(Player4Container.transform.childCount - 1).GetComponent<GameTileScript>().toggleTileFace();
+                    }
                     RearrangeCards(Player4Container);
                     break;
                 default:
@@ -1070,25 +1244,36 @@ public class GameManagerScript : MonoBehaviour
                 case 1:
                     TileContainer.transform.GetChild(TileContainer.transform.childCount - 1).gameObject.transform.SetParent(Player1Container.transform, false);
                     freshdrawtile = Player1Container.transform.GetChild(Player1Container.transform.childCount - 1).gameObject.name;
-                    Player1Container.transform.GetChild(Player1Container.transform.childCount - 1).GetComponent<GameTileScript>().toggleTileFace();
+                    if (p1_TileFace == false) { 
+                       Player1Container.transform.GetChild(Player1Container.transform.childCount - 1).GetComponent<GameTileScript>().toggleTileFace();
+                    }
                     RearrangeCards(Player1Container);
                     break;
                 case 2:
                     TileContainer.transform.GetChild(TileContainer.transform.childCount - 1).gameObject.transform.SetParent(Player2Container.transform, false);
                     freshdrawtile = Player2Container.transform.GetChild(Player2Container.transform.childCount - 1).gameObject.name;
-                    Player2Container.transform.GetChild(Player2Container.transform.childCount - 1).GetComponent<GameTileScript>().toggleTileFace();
+                    if (p2_TileFace == false)
+                    {
+                        Player2Container.transform.GetChild(Player2Container.transform.childCount - 1).GetComponent<GameTileScript>().toggleTileFace();
+                    }
                     RearrangeCards(Player2Container);
                     break;
                 case 3:
                     TileContainer.transform.GetChild(TileContainer.transform.childCount - 1).gameObject.transform.SetParent(Player3Container.transform, false);
                     freshdrawtile = Player3Container.transform.GetChild(Player3Container.transform.childCount - 1).gameObject.name;
-                    Player3Container.transform.GetChild(Player3Container.transform.childCount - 1).GetComponent<GameTileScript>().toggleTileFace();
+                    if (p3_TileFace == false)
+                    {
+                        Player3Container.transform.GetChild(Player3Container.transform.childCount - 1).GetComponent<GameTileScript>().toggleTileFace();
+                    }
                     RearrangeCards(Player3Container);
                     break;
                 case 4:
                     TileContainer.transform.GetChild(TileContainer.transform.childCount - 1).gameObject.transform.SetParent(Player4Container.transform, false);
                     freshdrawtile = Player4Container.transform.GetChild(Player4Container.transform.childCount - 1).gameObject.name;
-                    Player4Container.transform.GetChild(Player4Container.transform.childCount - 1).GetComponent<GameTileScript>().toggleTileFace();
+                    if (p4_TileFace == false)
+                    {
+                        Player4Container.transform.GetChild(Player4Container.transform.childCount - 1).GetComponent<GameTileScript>().toggleTileFace();
+                    }
                     RearrangeCards(Player4Container);
                     break;
                 default:
@@ -1821,6 +2006,7 @@ public class GameManagerScript : MonoBehaviour
         int discardIndex = GetDiscardTile();
         int[] chosenmeld = new int[3];
         int[] notdiscardtile = new int[2];
+        bool rotate = false;
 
         Debug.Log("EXECUTE CHOW DISCARD INDEX: " + discardIndex);
         //identify which tile isnt discard tile
@@ -1851,18 +2037,34 @@ public class GameManagerScript : MonoBehaviour
             case 1:
                 PlayerContainer = Player1Container;
                 PlayerExposedContainer = Player1ExposedContainer;
+                if (p1_TileFace == true)
+                {
+                    rotate = true;
+                }
                 break;
             case 2:
                 PlayerContainer = Player2Container;
                 PlayerExposedContainer = Player2ExposedContainer;
+                if (p2_TileFace == true)
+                {
+                    rotate = true;
+                }
                 break;
             case 3:
                 PlayerContainer = Player3Container;
                 PlayerExposedContainer = Player3ExposedContainer;
+                if (p3_TileFace == true)
+                {
+                    rotate = true;
+                }
                 break;
             case 4:
                 PlayerContainer = Player4Container;
                 PlayerExposedContainer = Player4ExposedContainer;
+                if (p4_TileFace == true)
+                {
+                    rotate = true;
+                }
                 break;
             default:
                 PlayerContainer = null;
@@ -1882,7 +2084,9 @@ public class GameManagerScript : MonoBehaviour
             Debug.Log("Tile Name is: " + tilename);
             if (chosenmeld[i] != discardIndex)
             {
-
+                if (rotate) {
+                    PlayerContainer.transform.Find(tilename).gameObject.GetComponent<GameTileScript>().toggleTileFace();
+                }
                 PlayerContainer.transform.Find(tilename).gameObject.transform.SetParent(PlayerExposedContainer.transform.GetChild(PlayerExposedContainer.transform.childCount - 1).transform);
             }
             else
@@ -1904,23 +2108,40 @@ public class GameManagerScript : MonoBehaviour
         string gangtilename;
         GameObject PlayerContainer;
         GameObject PlayerExposedContainer;
+        bool rotate = false;
         switch (CurrentPlayer)
         {
             case 1:
                 PlayerContainer = Player1Container;
                 PlayerExposedContainer = Player1ExposedContainer;
+                if (p1_TileFace == true)
+                {
+                    rotate = true;
+                }
                 break;
             case 2:
                 PlayerContainer = Player2Container;
                 PlayerExposedContainer = Player2ExposedContainer;
+                if (p2_TileFace == true)
+                {
+                    rotate = true;
+                }
                 break;
             case 3:
                 PlayerContainer = Player3Container;
                 PlayerExposedContainer = Player3ExposedContainer;
+                if (p3_TileFace == true)
+                {
+                    rotate = true;
+                }
                 break;
             case 4:
                 PlayerContainer = Player4Container;
                 PlayerExposedContainer = Player4ExposedContainer;
+                if (p4_TileFace == true)
+                {
+                    rotate = true;
+                }
                 break;
             default:
                 PlayerContainer = null;
@@ -1935,6 +2156,10 @@ public class GameManagerScript : MonoBehaviour
             foreach (Transform setcontainer in PlayerExposedContainer.transform)
             {
                 if (setcontainer.GetChild(0).gameObject.name == freshdrawtile){
+                    if (rotate)
+                    {
+                        PlayerContainer.transform.Find(freshdrawtile).gameObject.GetComponent<GameTileScript>().toggleTileFace();
+                    }
                     PlayerContainer.transform.Find(freshdrawtile).gameObject.transform.SetParent(setcontainer);
                 }
             }
@@ -1959,6 +2184,10 @@ public class GameManagerScript : MonoBehaviour
             Debug.Log("Tile Name is: " + gangtilename);
 
             for (int i = 0; i < 4; i++) {
+                if (rotate)
+                {
+                    PlayerContainer.transform.Find(gangtilename).gameObject.GetComponent<GameTileScript>().toggleTileFace();
+                }
                 PlayerContainer.transform.Find(gangtilename).gameObject.transform.SetParent(PlayerExposedContainer.transform.GetChild(PlayerExposedContainer.transform.childCount - 1).transform);
             }
         }
@@ -1973,23 +2202,39 @@ public class GameManagerScript : MonoBehaviour
         AssignNextPlayer();
         GameObject PlayerContainer;
         GameObject PlayerExposedContainer;
+        bool rotate = false;
         switch (CurrentPlayer)
         {
             case 1:
                 PlayerContainer = Player1Container;
                 PlayerExposedContainer = Player1ExposedContainer;
+                if (p1_TileFace == true) {
+                    rotate = true;
+                }
                 break;
             case 2:
                 PlayerContainer = Player2Container;
                 PlayerExposedContainer = Player2ExposedContainer;
+                if (p2_TileFace == true)
+                {
+                    rotate = true;
+                }
                 break;
             case 3:
                 PlayerContainer = Player3Container;
                 PlayerExposedContainer = Player3ExposedContainer;
+                if (p3_TileFace == true)
+                {
+                    rotate = true;
+                }
                 break;
             case 4:
                 PlayerContainer = Player4Container;
                 PlayerExposedContainer = Player4ExposedContainer;
+                if (p4_TileFace == true)
+                {
+                    rotate = true;
+                }
                 break;
             default:
                 PlayerContainer = null;
@@ -2027,6 +2272,10 @@ public class GameManagerScript : MonoBehaviour
             if (discardIndex.ToString().Length == 1) { tilename = "0" + discardIndex.ToString(); }
             else { tilename = discardIndex.ToString(); }
             Debug.Log("Tile Name is: " + tilename);
+            if (rotate)
+            {
+                PlayerContainer.transform.Find(tilename).gameObject.GetComponent<GameTileScript>().toggleTileFace();
+            }
             PlayerContainer.transform.Find(tilename).gameObject.transform.SetParent(PlayerExposedContainer.transform.GetChild(PlayerExposedContainer.transform.childCount - 1).transform);
         }
     }
